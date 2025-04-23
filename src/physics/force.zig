@@ -15,6 +15,7 @@ pub fn drag(particle: *const Particle, dragCoefficient: f32) Vec2 {
     }
 
     return particle.velocity.normalize()
-        .mulScalar(-dragCoefficient)
+        .negate()
+        .mulScalar(dragCoefficient)
         .mulScalar(velocity2);
 }

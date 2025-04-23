@@ -58,6 +58,8 @@ pub fn Vec2(comptime Scalar: type) type {
         pub const splat = Shared.splat;
         pub const eqlApprox = Shared.eqlApprox;
         pub const eql = Shared.eql;
+        pub const negate = Shared.negate;
+        pub const max = Shared.max;
         pub const format = Shared.format;
     };
 }
@@ -139,6 +141,8 @@ pub fn Vec3(comptime Scalar: type) type {
         pub const splat = Shared.splat;
         pub const eqlApprox = Shared.eqlApprox;
         pub const eql = Shared.eql;
+        pub const negate = Shared.negate;
+        pub const max = Shared.max;
         pub const format = Shared.format;
     };
 }
@@ -241,6 +245,29 @@ pub fn VecShared(comptime Scalar: type, comptime VecN: type) type {
 
         pub inline fn eql(a: *const VecN, b: *const VecN) bool {
             return a.eqlApprox(b, std.math.floatEps(Scalar));
+        }
+
+        pub inline fn negate(a: *const VecN) VecN {
+            return switch (VecN.n) {
+                inline 2 => .{ .v = VecN.init(-1, -1).v * a.v },
+                inline 3 => .{ .v = VecN.init(-1, -1, -1).v * a.v },
+                else => @compileError("Expected Vec2 or Vec3, found '" ++ @typeName(VecN) ++ "'"),
+            };
+        }
+
+        pub inline fn max(a: *const VecN, b: *const VecN) VecN {
+            return switch (VecN.n) {
+                inline 2 => VecN.init(
+                    @min(a.x(), b.x()),
+                    @min(a.y(), b.y()),
+                ),
+                inline 3 => VecN.init(
+                    @min(a.x(), b.x()),
+                    @min(a.y(), b.y()),
+                    @min(a.z(), b.z()),
+                ),
+                else => @compileError("Expected Vec2 or Vec3, found '" ++ @typeName(VecN) ++ "'"),
+            };
         }
 
         pub inline fn format(
