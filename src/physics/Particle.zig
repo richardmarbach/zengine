@@ -18,3 +18,8 @@ pub fn init(x: f32, y: f32, mass: f32) Self {
         .mass = mass,
     };
 }
+
+pub fn integrate(self: *Self, deltaTime: f32) void {
+    self.velocity = self.velocity.add(&self.acceleration.mulScalar(deltaTime));
+    self.position = self.position.add(&self.velocity.mulScalar(deltaTime));
+}

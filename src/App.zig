@@ -66,8 +66,7 @@ pub fn update(self: *Self) void {
 
     self.timePreviousFrame = c.SDL_GetTicks();
 
-    self.particle.velocity = self.particle.velocity.add(&self.particle.acceleration.mulScalar(deltaTime));
-    self.particle.position = self.particle.position.add(&self.particle.velocity.mulScalar(deltaTime));
+    self.particle.integrate(deltaTime);
 
     var bounce = Vec2.init(1, 1);
     const currentY: i32 = @intFromFloat(self.particle.position.y());
