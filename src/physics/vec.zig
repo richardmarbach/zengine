@@ -232,7 +232,7 @@ pub fn VecShared(comptime Scalar: type, comptime VecN: type) type {
         pub inline fn eqlApprox(a: *const VecN, b: *const VecN, eps: Scalar) bool {
             var i: usize = 0;
             while (i < VecN.n) : (i += 1) {
-                if (std.math.approxEqAbs(Scalar, a.v[i], b.v[i], eps)) {
+                if (!std.math.approxEqAbs(Scalar, a.v[i], b.v[i], eps)) {
                     return false;
                 }
             }

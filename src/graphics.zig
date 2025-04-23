@@ -141,7 +141,7 @@ pub fn drawRect(x: f32, y: f32, w: f32, h: f32, color: u32) void {
 }
 
 pub fn drawFillRect(x: f32, y: f32, w: f32, h: f32, color: u32) void {
-    c.boxColor(
+    _ = c.boxColor(
         renderer,
         @intFromFloat(x - w / 2.0),
         @intFromFloat(y - h / 2.0),

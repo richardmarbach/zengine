@@ -7,16 +7,17 @@ position: Vec2,
 velocity: Vec2,
 acceleration: Vec2,
 
-radius: u32 = 4,
+radius: u32,
 mass: f32,
 invMass: f32,
 sumForces: Vec2 = Vec2.init(0, 0),
 
-pub fn init(x: f32, y: f32, mass: f32) Self {
+pub fn init(x: f32, y: f32, mass: f32, radius: u32) Self {
     return .{
         .position = Vec2.init(x, y),
         .velocity = Vec2.init(0, 0),
         .acceleration = Vec2.init(0, 0),
+        .radius = radius,
         .mass = mass,
         .invMass = if (mass == 0) 0 else 1 / mass,
     };

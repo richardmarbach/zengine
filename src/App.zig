@@ -9,13 +9,22 @@ const Vec2 = @import("physics/vec.zig").Vec2(f32);
 const graphics = @import("graphics.zig");
 const Particle = @import("physics/Particle.zig");
 const physicsConstants = @import("physics/constants.zig");
+const force = @import("physics/force.zig");
 
 const Self = @This();
+
+const Rect = struct {
+    x: f32,
+    y: f32,
+    w: f32,
+    h: f32,
+};
 
 running: bool = true,
 alloc: std.mem.Allocator,
 particles: std.ArrayList(Particle),
 pushForce: Vec2 = Vec2.init(0, 0),
+liquid: Rect,
 
 timePreviousFrame: u64 = 0,
 
@@ -24,13 +33,19 @@ pub fn init(alloc: std.mem.Allocator) !Self {
 
     var particles = std.ArrayList(Particle).init(alloc);
 
-    try particles.append(Particle.init(50, 50, 1));
-    // try particles.append(Particle.init(50, 100, 5));
+    try particles.append(Particle.init(50, 50, 1, 4));
+    try particles.append(Particle.init(50, 100, 5, 10));
     // try particles.append(Particle.init(50, 150, 10));
 
     return .{
         .alloc = alloc,
         .particles = particles,
+        .liquid = Rect{
+            .x = 0,
+            .y = @floatFromInt(graphics.height() / 2),
+            .w = @floatFromInt(graphics.width()),
+            .h = @floatFromInt(graphics.height() / 2),
+        },
     };
 }
 
@@ -39,7 +54,7 @@ pub fn deinit(self: *Self) void {
     graphics.closeWindow();
 }
 
-pub fn input(self: *Self) void {
+pub fn input(self: *Self) !void {
     var event: c.SDL_Event = undefined;
     while (c.SDL_PollEvent(&event)) {
         switch (event.type) {
@@ -62,6 +77,16 @@ pub fn input(self: *Self) void {
                     c.SDLK_LEFT => self.pushForce.setX(0),
                     c.SDLK_RIGHT => self.pushForce.setX(0),
                     else => {},
+                }
+            },
+            c.SDL_EVENT_MOUSE_BUTTON_DOWN => {
+                if (event.button.button == c.SDL_BUTTON_LEFT) {
+                    try self.particles.append(Particle.init(
+                        event.button.x,
+                        event.button.y,
+                        1,
+                        4,
+                    ));
                 }
             },
             else => {},
@@ -90,20 +115,26 @@ pub fn update(self: *Self) void {
         particle.addForce(&Vec2.init(0.2 * physicsConstants.PIXELS_PER_METER, 0));
 
         // Weight
-        particle.addForce(&Vec2.init(0, 9.8 * physicsConstants.PIXELS_PER_METER).mulScalar(particle.mass));
+        particle.addForce(&force.weight(particle, 9.8));
 
         // Push
         particle.addForce(&self.pushForce);
 
+        if (particle.position.y() >= self.liquid.y) {
+            particle.addForce(&force.drag(particle, 0.01));
+        }
+
+        particle.integrate(deltaTime);
+
         var bounce = Vec2.init(1, 1);
-        const currentY: i32 = @intFromFloat(particle.position.y());
         const currentX: i32 = @intFromFloat(particle.position.x());
+        const currentY: i32 = @intFromFloat(particle.position.y());
 
         if (currentY >= graphics.height() - particle.radius) {
-            particle.position.setY(@floatFromInt(graphics.height() - particle.radius));
+            particle.position.setY(@floatFromInt(graphics.height() - particle.radius * 2));
             bounce.setY(-0.8);
         }
-        if (currentY <= particle.radius) {
+        if (currentY < particle.radius * 2) {
             particle.position.setY(@floatFromInt(particle.radius));
             bounce.setY(-0.8);
         }
@@ -112,18 +143,24 @@ pub fn update(self: *Self) void {
             particle.position.setX(@floatFromInt(graphics.width() - particle.radius));
             bounce.setX(-0.8);
         }
-        if (currentX <= particle.radius) {
+        if (currentX < particle.radius) {
             particle.position.setX(@floatFromInt(particle.radius));
             bounce.setX(-0.8);
         }
         particle.velocity = particle.velocity.mul(&bounce);
-
-        particle.integrate(deltaTime);
     }
 }
 
-pub fn render(self: *Self) void {
+pub fn render(self: *const Self) void {
     graphics.clearScreen(0xFF636205);
+
+    graphics.drawFillRect(
+        self.liquid.x + self.liquid.w / 2,
+        self.liquid.y + self.liquid.h / 2,
+        self.liquid.w,
+        self.liquid.h,
+        0xFF6E3712,
+    );
 
     for (self.particles.items) |particle| {
         graphics.drawFillCircle(

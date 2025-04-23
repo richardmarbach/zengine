@@ -12,7 +12,7 @@ pub fn main() !void {
     defer app.deinit();
 
     while (app.isRunning()) {
-        app.input();
+        try app.input();
         app.update();
         app.render();
     }
