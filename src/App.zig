@@ -111,18 +111,21 @@ pub fn update(self: *Self) void {
     self.timePreviousFrame = c.SDL_GetTicks();
 
     for (self.particles.items) |*particle| {
-        // Wind
-        particle.addForce(&Vec2.init(0.2 * physicsConstants.PIXELS_PER_METER, 0));
-
-        // Weight
-        particle.addForce(&force.weight(particle, 9.8));
-
+        // // Wind
+        // particle.addForce(&Vec2.init(0.2 * physicsConstants.PIXELS_PER_METER, 0));
+        //
+        // // Weight
+        // particle.addForce(&force.weight(particle, 9.8));
+        //
         // Push
         particle.addForce(&self.pushForce);
-
-        if (particle.position.y() >= self.liquid.y) {
-            particle.addForce(&force.drag(particle, 0.01));
-        }
+        //
+        // // Friction
+        particle.addForce(&force.friction(particle, 10 * physicsConstants.PIXELS_PER_METER));
+        //
+        // if (particle.position.y() >= self.liquid.y) {
+        //     particle.addForce(&force.drag(particle, 0.01));
+        // }
 
         particle.integrate(deltaTime);
 
@@ -130,16 +133,16 @@ pub fn update(self: *Self) void {
         const currentX: i32 = @intFromFloat(particle.position.x());
         const currentY: i32 = @intFromFloat(particle.position.y());
 
-        if (currentY >= graphics.height() - particle.radius) {
+        if (currentY > graphics.height() - particle.radius) {
             particle.position.setY(@floatFromInt(graphics.height() - particle.radius * 2));
             bounce.setY(-0.8);
         }
-        if (currentY < particle.radius * 2) {
+        if (currentY < particle.radius) {
             particle.position.setY(@floatFromInt(particle.radius));
             bounce.setY(-0.8);
         }
 
-        if (currentX >= graphics.width() - particle.radius) {
+        if (currentX > graphics.width() - particle.radius) {
             particle.position.setX(@floatFromInt(graphics.width() - particle.radius));
             bounce.setX(-0.8);
         }

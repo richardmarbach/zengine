@@ -19,3 +19,12 @@ pub fn drag(particle: *const Particle, dragCoefficient: f32) Vec2 {
         .mulScalar(dragCoefficient)
         .mulScalar(velocity2);
 }
+
+pub fn friction(particle: *const Particle, k: f32) Vec2 {
+    const velocity2 = particle.velocity.len2();
+    if (velocity2 == 0) {
+        return Vec2.init(0, 0);
+    }
+
+    return particle.velocity.normalize().mulScalar(-k);
+}
