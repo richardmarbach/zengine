@@ -14,24 +14,27 @@ const Self = @This();
 
 running: bool = true,
 alloc: std.mem.Allocator,
-particle: Particle,
+particles: std.ArrayList(Particle),
 
 timePreviousFrame: u64 = 0,
 
 pub fn init(alloc: std.mem.Allocator) !Self {
     try graphics.openWindow();
 
-    var particle = Particle.init(50, 100, 1);
-    particle.velocity = Vec2.init(500, 3000);
-    particle.acceleration = Vec2.init(0, 9.8 * physicsConstants.PIXELS_PER_METER);
+    var particles = std.ArrayList(Particle).init(alloc);
+
+    try particles.append(Particle.init(50, 50, 1));
+    try particles.append(Particle.init(50, 100, 5));
+    try particles.append(Particle.init(50, 150, 10));
 
     return .{
         .alloc = alloc,
-        .particle = particle,
+        .particles = particles,
     };
 }
 
-pub fn deinit(_: *Self) void {
+pub fn deinit(self: *Self) void {
+    self.particles.deinit();
     graphics.closeWindow();
 }
 
@@ -66,41 +69,51 @@ pub fn update(self: *Self) void {
 
     self.timePreviousFrame = c.SDL_GetTicks();
 
-    self.particle.integrate(deltaTime);
+    for (self.particles.items) |*particle| {
+        // Gravity
+        // particle.addForce(&Vec2.init(0, 9.8 * physicsConstants.PIXELS_PER_METER));
 
-    var bounce = Vec2.init(1, 1);
-    const currentY: i32 = @intFromFloat(self.particle.position.y());
-    const currentX: i32 = @intFromFloat(self.particle.position.x());
+        // Wind
+        particle.addForce(&Vec2.init(0.2 * physicsConstants.PIXELS_PER_METER, 0));
 
-    if (currentY >= graphics.height() - self.particle.radius) {
-        self.particle.position.setY(@floatFromInt(graphics.height() - self.particle.radius));
-        bounce.setY(-0.8);
-    }
-    if (currentY <= self.particle.radius) {
-        self.particle.position.setY(@floatFromInt(self.particle.radius));
-        bounce.setY(-0.8);
-    }
+        particle.integrate(deltaTime);
 
-    if (currentX >= graphics.width() - self.particle.radius) {
-        self.particle.position.setX(@floatFromInt(graphics.width() - self.particle.radius));
-        bounce.setX(-0.8);
+        var bounce = Vec2.init(1, 1);
+        const currentY: i32 = @intFromFloat(particle.position.y());
+        const currentX: i32 = @intFromFloat(particle.position.x());
+
+        if (currentY >= graphics.height() - particle.radius) {
+            particle.position.setY(@floatFromInt(graphics.height() - particle.radius));
+            bounce.setY(-0.8);
+        }
+        if (currentY <= particle.radius) {
+            particle.position.setY(@floatFromInt(particle.radius));
+            bounce.setY(-0.8);
+        }
+
+        if (currentX >= graphics.width() - particle.radius) {
+            particle.position.setX(@floatFromInt(graphics.width() - particle.radius));
+            bounce.setX(-0.8);
+        }
+        if (currentX <= particle.radius) {
+            particle.position.setX(@floatFromInt(particle.radius));
+            bounce.setX(-0.8);
+        }
+        particle.velocity = particle.velocity.mul(&bounce);
     }
-    if (currentX <= self.particle.radius) {
-        self.particle.position.setX(@floatFromInt(self.particle.radius));
-        bounce.setX(-0.8);
-    }
-    self.particle.velocity = self.particle.velocity.mul(&bounce);
 }
 
 pub fn render(self: *Self) void {
     graphics.clearScreen(0xFF636205);
 
-    graphics.drawFillCircle(
-        self.particle.position.x(),
-        self.particle.position.y(),
-        4,
-        0xFFFFFFFF,
-    );
+    for (self.particles.items) |particle| {
+        graphics.drawFillCircle(
+            particle.position.x(),
+            particle.position.y(),
+            @floatFromInt(particle.radius),
+            0xFFFFFFFF,
+        );
+    }
 
     graphics.renderFrame();
 }

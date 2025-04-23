@@ -9,6 +9,7 @@ acceleration: Vec2,
 
 radius: u32 = 4,
 mass: f32,
+sumForces: Vec2 = Vec2.init(0, 0),
 
 pub fn init(x: f32, y: f32, mass: f32) Self {
     return .{
@@ -19,7 +20,19 @@ pub fn init(x: f32, y: f32, mass: f32) Self {
     };
 }
 
-pub fn integrate(self: *Self, deltaTime: f32) void {
-    self.velocity = self.velocity.add(&self.acceleration.mulScalar(deltaTime));
-    self.position = self.position.add(&self.velocity.mulScalar(deltaTime));
+pub inline fn addForce(self: *Self, force: *const Vec2) void {
+    self.sumForces = self.sumForces.add(force);
+}
+
+pub fn integrate(self: *Self, dt: f32) void {
+    self.acceleration = self.sumForces.divScalar(self.mass);
+
+    self.velocity = self.velocity.add(&self.acceleration.mulScalar(dt));
+    self.position = self.position.add(&self.velocity.mulScalar(dt));
+
+    self.clearForces();
+}
+
+pub inline fn clearForces(self: *Self) void {
+    self.sumForces = Vec2.init(0, 0);
 }
