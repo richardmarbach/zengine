@@ -28,6 +28,14 @@ pub fn Vec2(comptime Scalar: type) type {
             return v.v[1];
         }
 
+        pub inline fn setX(v: *VecN, s: Scalar) void {
+            v.v[0] = s;
+        }
+
+        pub inline fn setY(v: *VecN, s: Scalar) void {
+            v.v[1] = s;
+        }
+
         pub const add = Shared.add;
         pub const sub = Shared.sub;
         pub const mul = Shared.mul;

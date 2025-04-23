@@ -44,6 +44,9 @@ pub fn openWindow() !void {
         c.SDL_Log("Unable to create renderer: %s", c.SDL_GetError());
         return error.SDLInitializationFailed;
     };
+
+    windowWidth = @bitCast(displayMode.*.w);
+    windowHeight = @bitCast(displayMode.*.h);
 }
 
 pub fn closeWindow() void {

@@ -16,15 +16,18 @@ running: bool = true,
 alloc: std.mem.Allocator,
 particle: Particle,
 
-timePreviousFrame: u64,
+timePreviousFrame: u64 = 0,
 
 pub fn init(alloc: std.mem.Allocator) !Self {
     try graphics.openWindow();
 
+    var particle = Particle.init(50, 100, 1);
+    particle.velocity = Vec2.init(500, 3000);
+    particle.acceleration = Vec2.init(0, 9.8 * physicsConstants.PIXELS_PER_METER);
+
     return .{
         .alloc = alloc,
-        .particle = Particle.init(50, 100, 1),
-        .timePreviousFrame = 0,
+        .particle = particle,
     };
 }
 
@@ -63,8 +66,31 @@ pub fn update(self: *Self) void {
 
     self.timePreviousFrame = c.SDL_GetTicks();
 
-    self.particle.velocity = Vec2.init(100, 50).mulScalar(deltaTime);
-    self.particle.position = self.particle.position.add(&self.particle.velocity);
+    self.particle.velocity = self.particle.velocity.add(&self.particle.acceleration.mulScalar(deltaTime));
+    self.particle.position = self.particle.position.add(&self.particle.velocity.mulScalar(deltaTime));
+
+    var bounce = Vec2.init(1, 1);
+    const currentY: i32 = @intFromFloat(self.particle.position.y());
+    const currentX: i32 = @intFromFloat(self.particle.position.x());
+
+    if (currentY >= graphics.height() - self.particle.radius) {
+        self.particle.position.setY(@floatFromInt(graphics.height() - self.particle.radius));
+        bounce.setY(-0.8);
+    }
+    if (currentY <= self.particle.radius) {
+        self.particle.position.setY(@floatFromInt(self.particle.radius));
+        bounce.setY(-0.8);
+    }
+
+    if (currentX >= graphics.width() - self.particle.radius) {
+        self.particle.position.setX(@floatFromInt(graphics.width() - self.particle.radius));
+        bounce.setX(-0.8);
+    }
+    if (currentX <= self.particle.radius) {
+        self.particle.position.setX(@floatFromInt(self.particle.radius));
+        bounce.setX(-0.8);
+    }
+    self.particle.velocity = self.particle.velocity.mul(&bounce);
 }
 
 pub fn render(self: *Self) void {

@@ -7,6 +7,7 @@ position: Vec2,
 velocity: Vec2,
 acceleration: Vec2,
 
+radius: u32 = 4,
 mass: f32,
 
 pub fn init(x: f32, y: f32, mass: f32) Self {
