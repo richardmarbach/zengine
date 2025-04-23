@@ -28,3 +28,14 @@ pub fn friction(particle: *const Particle, k: f32) Vec2 {
 
     return particle.velocity.normalize().mulScalar(-k);
 }
+
+pub fn gravitational(a: *const Particle, b: *const Particle, G: f32, minDistance: f32, maxDistance: f32) Vec2 {
+    const d = b.position.sub(&a.position);
+    const d2 = d.len2();
+
+    const distance = std.math.clamp(d2, minDistance, maxDistance);
+    const attractionDirection = d.normalize();
+    const attractionMagnitude = G * a.mass * b.mass / distance;
+
+    return attractionDirection.mulScalar(attractionMagnitude);
+}

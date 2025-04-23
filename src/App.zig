@@ -34,7 +34,7 @@ pub fn init(alloc: std.mem.Allocator) !Self {
     var particles = std.ArrayList(Particle).init(alloc);
 
     try particles.append(Particle.init(50, 50, 1, 4));
-    try particles.append(Particle.init(50, 100, 5, 10));
+    try particles.append(Particle.init(100, 100, 5, 10));
     // try particles.append(Particle.init(50, 150, 10));
 
     return .{
@@ -121,11 +121,17 @@ pub fn update(self: *Self) void {
         particle.addForce(&self.pushForce);
         //
         // // Friction
-        particle.addForce(&force.friction(particle, 10 * physicsConstants.PIXELS_PER_METER));
+        // particle.addForce(&force.friction(particle, 10 * physicsConstants.PIXELS_PER_METER));
         //
         // if (particle.position.y() >= self.liquid.y) {
         //     particle.addForce(&force.drag(particle, 0.01));
         // }
+
+        for (self.particles.items) |*otherParticle| {
+            if (particle == otherParticle) continue;
+            const attraction = force.gravitational(particle, otherParticle, 10 * physicsConstants.PIXELS_PER_METER, 5, 100);
+            particle.addForce(&attraction);
+        }
 
         particle.integrate(deltaTime);
 
