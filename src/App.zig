@@ -5,23 +5,31 @@ const c = @cImport({
 });
 
 const std = @import("std");
+const Vec2 = @import("physics/vec.zig").Vec2(f32);
 const graphics = @import("graphics.zig");
+const Particle = @import("physics/Particle.zig");
+const physicsConstants = @import("physics/constants.zig");
 
 const Self = @This();
 
 running: bool = true,
 alloc: std.mem.Allocator,
+particle: Particle,
 
-pub fn init(alloc: std.mem.Allocator) Self {
-    return .{ .alloc = alloc };
+timePreviousFrame: u64,
+
+pub fn init(alloc: std.mem.Allocator) !Self {
+    try graphics.openWindow();
+
+    return .{
+        .alloc = alloc,
+        .particle = Particle.init(50, 100, 1),
+        .timePreviousFrame = 0,
+    };
 }
 
 pub fn deinit(_: *Self) void {
     graphics.closeWindow();
-}
-
-pub fn setup(_: *Self) !void {
-    try graphics.openWindow();
 }
 
 pub fn input(self: *Self) void {
@@ -39,11 +47,32 @@ pub fn input(self: *Self) void {
     }
 }
 
-pub fn update(_: *Self) void {}
+pub fn update(self: *Self) void {
+    if (self.timePreviousFrame + physicsConstants.MS_PER_FRAME > c.SDL_GetTicks()) {
+        const timeElapsed = physicsConstants.MS_PER_FRAME - (c.SDL_GetTicks() - self.timePreviousFrame);
+        c.SDL_Delay(@truncate(timeElapsed));
+    }
+    const deltaTime: f32 = deltaTime: {
+        const elapsedTicks: f32 = @floatFromInt(c.SDL_GetTicks() - self.timePreviousFrame);
+        break :deltaTime elapsedTicks / 1000.0;
+    };
 
-pub fn render(_: *Self) void {
-    graphics.clearScreen(0xFF056263);
-    graphics.drawFillCircle(200, 200, 40, 0xFFFFFFFF);
+    self.timePreviousFrame = c.SDL_GetTicks();
+
+    self.particle.velocity = Vec2.init(100, 50).mulScalar(deltaTime);
+    self.particle.position = self.particle.position.add(&self.particle.velocity);
+}
+
+pub fn render(self: *Self) void {
+    graphics.clearScreen(0xFF636205);
+
+    graphics.drawFillCircle(
+        self.particle.position.x(),
+        self.particle.position.y(),
+        4,
+        0xFFFFFFFF,
+    );
+
     graphics.renderFrame();
 }
 

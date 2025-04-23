@@ -8,10 +8,8 @@ pub fn main() !void {
         if (gpa.deinit() == .leak) std.debug.assert(false);
     }
 
-    var app = App.init(allocator);
+    var app = try App.init(allocator);
     defer app.deinit();
-
-    try app.setup();
 
     while (app.isRunning()) {
         app.input();
