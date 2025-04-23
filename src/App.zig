@@ -54,7 +54,11 @@ pub fn update(self: *Self) void {
     }
     const deltaTime: f32 = deltaTime: {
         const elapsedTicks: f32 = @floatFromInt(c.SDL_GetTicks() - self.timePreviousFrame);
-        break :deltaTime elapsedTicks / 1000.0;
+        const deltaTime = elapsedTicks / 1000.0;
+        if (deltaTime > 4 * physicsConstants.MS_PER_FRAME) {
+            break :deltaTime physicsConstants.MS_PER_FRAME;
+        }
+        break :deltaTime deltaTime;
     };
 
     self.timePreviousFrame = c.SDL_GetTicks();
