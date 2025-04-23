@@ -15,6 +15,7 @@ const Self = @This();
 running: bool = true,
 alloc: std.mem.Allocator,
 particles: std.ArrayList(Particle),
+pushForce: Vec2 = Vec2.init(0, 0),
 
 timePreviousFrame: u64 = 0,
 
@@ -24,8 +25,8 @@ pub fn init(alloc: std.mem.Allocator) !Self {
     var particles = std.ArrayList(Particle).init(alloc);
 
     try particles.append(Particle.init(50, 50, 1));
-    try particles.append(Particle.init(50, 100, 5));
-    try particles.append(Particle.init(50, 150, 10));
+    // try particles.append(Particle.init(50, 100, 5));
+    // try particles.append(Particle.init(50, 150, 10));
 
     return .{
         .alloc = alloc,
@@ -44,8 +45,23 @@ pub fn input(self: *Self) void {
         switch (event.type) {
             c.SDL_EVENT_QUIT => self.running = false,
             c.SDL_EVENT_KEY_DOWN => {
-                if (event.key.key == c.SDLK_ESCAPE) {
-                    self.running = false;
+                switch (event.key.key) {
+                    c.SDLK_ESCAPE => self.running = false,
+                    c.SDLK_UP => self.pushForce.setY(-50 * physicsConstants.PIXELS_PER_METER),
+                    c.SDLK_DOWN => self.pushForce.setY(50 * physicsConstants.PIXELS_PER_METER),
+                    c.SDLK_LEFT => self.pushForce.setX(-50 * physicsConstants.PIXELS_PER_METER),
+                    c.SDLK_RIGHT => self.pushForce.setX(50 * physicsConstants.PIXELS_PER_METER),
+                    else => {},
+                }
+            },
+            c.SDL_EVENT_KEY_UP => {
+                switch (event.key.key) {
+                    c.SDLK_ESCAPE => self.running = false,
+                    c.SDLK_UP => self.pushForce.setY(0),
+                    c.SDLK_DOWN => self.pushForce.setY(0),
+                    c.SDLK_LEFT => self.pushForce.setX(0),
+                    c.SDLK_RIGHT => self.pushForce.setX(0),
+                    else => {},
                 }
             },
             else => {},
@@ -75,6 +91,9 @@ pub fn update(self: *Self) void {
 
         // Weight
         particle.addForce(&Vec2.init(0, 9.8 * physicsConstants.PIXELS_PER_METER).mulScalar(particle.mass));
+
+        // Push
+        particle.addForce(&self.pushForce);
 
         var bounce = Vec2.init(1, 1);
         const currentY: i32 = @intFromFloat(particle.position.y());
