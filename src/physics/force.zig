@@ -1,11 +1,10 @@
 const std = @import("std");
-const physicsConstants = @import("constants.zig");
 const Particle = @import("Particle.zig");
 const vec = @import("vec.zig");
 const Vec2 = vec.Vec2(f32);
 
 pub fn weight(particle: *const Particle, gravity: f32) Vec2 {
-    return Vec2.init(0, particle.mass * gravity * physicsConstants.PIXELS_PER_METER);
+    return Vec2.init(0, particle.mass * gravity);
 }
 
 pub fn drag(particle: *const Particle, dragCoefficient: f32) Vec2 {
@@ -38,4 +37,14 @@ pub fn gravitational(a: *const Particle, b: *const Particle, G: f32, minDistance
     const attractionMagnitude = G * a.mass * b.mass / distance;
 
     return attractionDirection.mulScalar(attractionMagnitude);
+}
+
+pub fn spring(p: *const Particle, anchor: *const Vec2, restLength: f32, k: f32) Vec2 {
+    const d = p.position.sub(anchor);
+    const displacement = d.len() - restLength;
+
+    const springDir = d.normalize();
+    const sprintMagnitude = -k * displacement;
+
+    return springDir.mulScalar(sprintMagnitude);
 }

@@ -25,6 +25,7 @@ alloc: std.mem.Allocator,
 particles: std.ArrayList(Particle),
 pushForce: Vec2 = Vec2.init(0, 0),
 liquid: Rect,
+anchor: Vec2,
 
 timePreviousFrame: u64 = 0,
 
@@ -33,13 +34,14 @@ pub fn init(alloc: std.mem.Allocator) !Self {
 
     var particles = std.ArrayList(Particle).init(alloc);
 
-    try particles.append(Particle.init(50, 50, 1, 4));
-    try particles.append(Particle.init(100, 100, 5, 10));
-    // try particles.append(Particle.init(50, 150, 10));
+    // try particles.append(Particle.init(50, 50, 1, 4));
+    // try particles.append(Particle.init(100, 100, 5, 10));
+    try particles.append(Particle.init(50, 150, 10, 4));
 
     return .{
         .alloc = alloc,
         .particles = particles,
+        .anchor = Vec2.init(200, 200),
         .liquid = Rect{
             .x = 0,
             .y = @floatFromInt(graphics.height() / 2),
@@ -122,17 +124,20 @@ pub fn update(self: *Self) void {
         //
         // // Friction
         // particle.addForce(&force.friction(particle, 10 * physicsConstants.PIXELS_PER_METER));
-        //
+
+        // Liquid drag
         // if (particle.position.y() >= self.liquid.y) {
         //     particle.addForce(&force.drag(particle, 0.01));
         // }
 
-        for (self.particles.items) |*otherParticle| {
-            if (particle == otherParticle) continue;
-            const attraction = force.gravitational(particle, otherParticle, 10 * physicsConstants.PIXELS_PER_METER, 5, 100);
-            particle.addForce(&attraction);
-        }
+        // Gravity
+        // for (self.particles.items) |*otherParticle| {
+        //     if (particle == otherParticle) continue;
+        //     const attraction = force.gravitational(particle, otherParticle, 10 * physicsConstants.PIXELS_PER_METER, 5, 100);
+        //     particle.addForce(&attraction);
+        // }
 
+        particle.addForce(&force.spring(particle, &self.anchor, 100, 10));
         particle.integrate(deltaTime);
 
         var bounce = Vec2.init(1, 1);
@@ -168,6 +173,13 @@ pub fn render(self: *const Self) void {
         self.liquid.y + self.liquid.h / 2,
         self.liquid.w,
         self.liquid.h,
+        0xFF6E3712,
+    );
+
+    graphics.drawFillCircle(
+        self.anchor.x(),
+        self.anchor.y(),
+        10,
         0xFF6E3712,
     );
 
