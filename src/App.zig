@@ -70,13 +70,11 @@ pub fn update(self: *Self) void {
     self.timePreviousFrame = c.SDL_GetTicks();
 
     for (self.particles.items) |*particle| {
-        // Gravity
-        // particle.addForce(&Vec2.init(0, 9.8 * physicsConstants.PIXELS_PER_METER));
-
         // Wind
         particle.addForce(&Vec2.init(0.2 * physicsConstants.PIXELS_PER_METER, 0));
 
-        particle.integrate(deltaTime);
+        // Weight
+        particle.addForce(&Vec2.init(0, 9.8 * physicsConstants.PIXELS_PER_METER).mulScalar(particle.mass));
 
         var bounce = Vec2.init(1, 1);
         const currentY: i32 = @intFromFloat(particle.position.y());
@@ -100,6 +98,8 @@ pub fn update(self: *Self) void {
             bounce.setX(-0.8);
         }
         particle.velocity = particle.velocity.mul(&bounce);
+
+        particle.integrate(deltaTime);
     }
 }
 
