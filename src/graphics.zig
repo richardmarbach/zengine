@@ -67,7 +67,7 @@ pub fn renderFrame() void {
 }
 
 pub fn drawLine(x0: f32, y0: f32, x1: f32, y1: f32, color: u32) void {
-    c.lineColor(
+    _ = c.lineColor(
         renderer,
         @intFromFloat(x0),
         @intFromFloat(y0),

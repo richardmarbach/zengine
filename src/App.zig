@@ -34,14 +34,28 @@ pub fn init(alloc: std.mem.Allocator) !Self {
 
     var particles = std.ArrayList(Particle).init(alloc);
 
-    // try particles.append(Particle.init(50, 50, 1, 4));
-    // try particles.append(Particle.init(100, 100, 5, 10));
-    try particles.append(Particle.init(50, 150, 10, 4));
+    for (1..5) |i| {
+        if (i == 1) {
+            try particles.append(Particle.init(
+                @as(f32, @floatFromInt(graphics.width() / 2)) - 100,
+                100 + @as(f32, @floatFromInt(i)) / 2,
+                2,
+                5,
+            ));
+        } else {
+            try particles.append(Particle.init(
+                @as(f32, @floatFromInt(graphics.width() / 2)),
+                100 + @as(f32, @floatFromInt(i)) * 25 / 2,
+                2,
+                5,
+            ));
+        }
+    }
 
     return .{
         .alloc = alloc,
         .particles = particles,
-        .anchor = Vec2.init(200, 200),
+        .anchor = Vec2.init(@floatFromInt(graphics.width() / 2), 50),
         .liquid = Rect{
             .x = 0,
             .y = @floatFromInt(graphics.height() / 2),
@@ -112,6 +126,11 @@ pub fn update(self: *Self) void {
 
     self.timePreviousFrame = c.SDL_GetTicks();
 
+    self.particles.items[0].addForce(&force.spring(&self.particles.items[0], &self.anchor, 100, 10));
+    for (self.particles.items[1..], self.particles.items[0 .. self.particles.items.len - 1]) |*particle, *other| {
+        particle.addForce(&force.springParticle(particle, other, 1, 40));
+    }
+
     for (self.particles.items) |*particle| {
         // // Wind
         // particle.addForce(&Vec2.init(0.2 * physicsConstants.PIXELS_PER_METER, 0));
@@ -137,7 +156,6 @@ pub fn update(self: *Self) void {
         //     particle.addForce(&attraction);
         // }
 
-        particle.addForce(&force.spring(particle, &self.anchor, 100, 10));
         particle.integrate(deltaTime);
 
         var bounce = Vec2.init(1, 1);
@@ -166,20 +184,27 @@ pub fn update(self: *Self) void {
 }
 
 pub fn render(self: *const Self) void {
-    graphics.clearScreen(0xFF636205);
+    graphics.clearScreen(0xFF3D3D3C);
 
-    graphics.drawFillRect(
-        self.liquid.x + self.liquid.w / 2,
-        self.liquid.y + self.liquid.h / 2,
-        self.liquid.w,
-        self.liquid.h,
-        0xFF6E3712,
-    );
+    // graphics.drawFillRect(
+    //     self.liquid.x + self.liquid.w / 2,
+    //     self.liquid.y + self.liquid.h / 2,
+    //     self.liquid.w,
+    //     self.liquid.h,
+    //     0xFF6E3712,
+    // );
 
     graphics.drawFillCircle(
         self.anchor.x(),
         self.anchor.y(),
         10,
+        0xFF6E3712,
+    );
+    graphics.drawLine(
+        self.anchor.x(),
+        self.anchor.y(),
+        self.particles.items[0].position.x(),
+        self.particles.items[0].position.y(),
         0xFF6E3712,
     );
 
@@ -189,6 +214,16 @@ pub fn render(self: *const Self) void {
             particle.position.y(),
             @floatFromInt(particle.radius),
             0xFFFFFFFF,
+        );
+    }
+
+    for (self.particles.items[1..], self.particles.items[0 .. self.particles.items.len - 1]) |*particle, *other| {
+        graphics.drawLine(
+            particle.position.x(),
+            particle.position.y(),
+            other.position.x(),
+            other.position.y(),
+            0xFF6E3712,
         );
     }
 

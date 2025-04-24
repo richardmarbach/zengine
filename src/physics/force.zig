@@ -48,3 +48,7 @@ pub fn spring(p: *const Particle, anchor: *const Vec2, restLength: f32, k: f32) 
 
     return springDir.mulScalar(sprintMagnitude);
 }
+
+pub fn springParticle(p: *const Particle, a: *const Particle, restLength: f32, k: f32) Vec2 {
+    return spring(p, &a.position, restLength, k);
+}

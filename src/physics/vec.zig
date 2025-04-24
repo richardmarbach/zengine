@@ -210,7 +210,11 @@ pub fn VecShared(comptime Scalar: type, comptime VecN: type) type {
         }
 
         pub inline fn normalize(v: *const VecN) VecN {
-            return v.div(&VecN.splat(v.len()));
+            const l = v.len();
+            if (l == 0) {
+                return v.*;
+            }
+            return v.div(&VecN.splat(l));
         }
 
         pub inline fn dir(a: *const VecN, b: *const VecN) VecN {
