@@ -11,21 +11,23 @@ const Particle = @import("physics/Particle.zig");
 const physicsConstants = @import("physics/constants.zig");
 const force = @import("physics/force.zig");
 
-const Self = @This();
-
-const Rect = struct {
-    x: f32,
-    y: f32,
-    w: f32,
-    h: f32,
+const Box = struct {
+    tl: *Particle,
+    tr: *Particle,
+    bl: *Particle,
+    br: *Particle,
+    size: f32,
+    diagonal: f32,
+    k: f32,
 };
+
+const Self = @This();
 
 running: bool = true,
 alloc: std.mem.Allocator,
 particles: std.ArrayList(Particle),
 pushForce: Vec2 = Vec2.init(0, 0),
-liquid: Rect,
-anchor: Vec2,
+box: Box,
 
 timePreviousFrame: u64 = 0,
 
@@ -34,33 +36,29 @@ pub fn init(alloc: std.mem.Allocator) !Self {
 
     var particles = std.ArrayList(Particle).init(alloc);
 
-    for (1..5) |i| {
-        if (i == 1) {
-            try particles.append(Particle.init(
-                @as(f32, @floatFromInt(graphics.width() / 2)) - 100,
-                100 + @as(f32, @floatFromInt(i)) / 2,
-                2,
-                5,
-            ));
-        } else {
-            try particles.append(Particle.init(
-                @as(f32, @floatFromInt(graphics.width() / 2)),
-                100 + @as(f32, @floatFromInt(i)) * 25 / 2,
-                2,
-                5,
-            ));
-        }
-    }
+    const start = Vec2.init(600, 800);
+    const size: f32 = 100;
+
+    // Top left
+    try particles.append(Particle.init(start.x(), start.y(), 2, 5));
+    // Top Right
+    try particles.append(Particle.init(start.x() + size, start.y(), 2, 5));
+    // Bottom right
+    try particles.append(Particle.init(start.x() + size, start.y() + size, 2, 5));
+    // Bottom left
+    try particles.append(Particle.init(start.x(), start.y() + size, 2, 5));
 
     return .{
         .alloc = alloc,
         .particles = particles,
-        .anchor = Vec2.init(@floatFromInt(graphics.width() / 2), 50),
-        .liquid = Rect{
-            .x = 0,
-            .y = @floatFromInt(graphics.height() / 2),
-            .w = @floatFromInt(graphics.width()),
-            .h = @floatFromInt(graphics.height() / 2),
+        .box = Box{
+            .tl = &particles.items[0],
+            .tr = &particles.items[1],
+            .br = &particles.items[2],
+            .bl = &particles.items[3],
+            .size = 100,
+            .diagonal = @sqrt(100.0 * 100.0 + 100.0 * 100.0),
+            .k = 1500,
         },
     };
 }
@@ -126,35 +124,41 @@ pub fn update(self: *Self) void {
 
     self.timePreviousFrame = c.SDL_GetTicks();
 
-    self.particles.items[0].addForce(&force.spring(&self.particles.items[0], &self.anchor, 100, 10));
-    for (self.particles.items[1..], self.particles.items[0 .. self.particles.items.len - 1]) |*particle, *other| {
-        particle.addForce(&force.springParticle(particle, other, 1, 40));
-    }
+    // right vertical
+    const trbr = force.springParticle(self.box.tr, self.box.br, self.box.size, self.box.k);
+    self.box.tr.addForce(&trbr);
+    self.box.br.addForce(&trbr.negate());
+
+    // left vertical
+    const tlbl = force.springParticle(self.box.tl, self.box.bl, self.box.size, self.box.k);
+    self.box.tl.addForce(&tlbl);
+    self.box.bl.addForce(&tlbl.negate());
+
+    // Bottom horizontal
+    const brbl = force.springParticle(self.box.br, self.box.bl, self.box.size, self.box.k);
+    self.box.br.addForce(&brbl);
+    self.box.bl.addForce(&brbl.negate());
+
+    // Top horizontal
+    const trtl = force.springParticle(self.box.tr, self.box.tl, self.box.size, self.box.k);
+    self.box.tr.addForce(&trtl);
+    self.box.tl.addForce(&trtl.negate());
+
+    // Diagonal
+    const tlbr = force.springParticle(self.box.tl, self.box.br, self.box.diagonal, self.box.k);
+    self.box.tl.addForce(&tlbr);
+    self.box.br.addForce(&tlbr.negate());
+
+    const trbl = force.springParticle(self.box.tr, self.box.bl, self.box.diagonal, self.box.k);
+    self.box.tr.addForce(&trbl);
+    self.box.bl.addForce(&trbl.negate());
 
     for (self.particles.items) |*particle| {
-        // // Wind
-        // particle.addForce(&Vec2.init(0.2 * physicsConstants.PIXELS_PER_METER, 0));
-        //
-        // // Weight
-        // particle.addForce(&force.weight(particle, 9.8));
-        //
         // Push
         particle.addForce(&self.pushForce);
-        //
-        // // Friction
-        // particle.addForce(&force.friction(particle, 10 * physicsConstants.PIXELS_PER_METER));
 
-        // Liquid drag
-        // if (particle.position.y() >= self.liquid.y) {
-        //     particle.addForce(&force.drag(particle, 0.01));
-        // }
-
-        // Gravity
-        // for (self.particles.items) |*otherParticle| {
-        //     if (particle == otherParticle) continue;
-        //     const attraction = force.gravitational(particle, otherParticle, 10 * physicsConstants.PIXELS_PER_METER, 5, 100);
-        //     particle.addForce(&attraction);
-        // }
+        particle.addForce(&force.drag(particle, 0.003));
+        particle.addForce(&force.weight(particle, 9.8 * physicsConstants.PIXELS_PER_METER));
 
         particle.integrate(deltaTime);
 
@@ -186,28 +190,6 @@ pub fn update(self: *Self) void {
 pub fn render(self: *const Self) void {
     graphics.clearScreen(0xFF3D3D3C);
 
-    // graphics.drawFillRect(
-    //     self.liquid.x + self.liquid.w / 2,
-    //     self.liquid.y + self.liquid.h / 2,
-    //     self.liquid.w,
-    //     self.liquid.h,
-    //     0xFF6E3712,
-    // );
-
-    graphics.drawFillCircle(
-        self.anchor.x(),
-        self.anchor.y(),
-        10,
-        0xFF6E3712,
-    );
-    graphics.drawLine(
-        self.anchor.x(),
-        self.anchor.y(),
-        self.particles.items[0].position.x(),
-        self.particles.items[0].position.y(),
-        0xFF6E3712,
-    );
-
     for (self.particles.items) |particle| {
         graphics.drawFillCircle(
             particle.position.x(),
@@ -217,15 +199,48 @@ pub fn render(self: *const Self) void {
         );
     }
 
-    for (self.particles.items[1..], self.particles.items[0 .. self.particles.items.len - 1]) |*particle, *other| {
-        graphics.drawLine(
-            particle.position.x(),
-            particle.position.y(),
-            other.position.x(),
-            other.position.y(),
-            0xFF6E3712,
-        );
-    }
+    graphics.drawLine(
+        self.box.tl.position.x(),
+        self.box.tl.position.y(),
+        self.box.tr.position.x(),
+        self.box.tr.position.y(),
+        0xFF6E3712,
+    );
+    graphics.drawLine(
+        self.box.tl.position.x(),
+        self.box.tl.position.y(),
+        self.box.bl.position.x(),
+        self.box.bl.position.y(),
+        0xFF6E3712,
+    );
+    graphics.drawLine(
+        self.box.tl.position.x(),
+        self.box.tl.position.y(),
+        self.box.br.position.x(),
+        self.box.br.position.y(),
+        0xFF6E3712,
+    );
+    graphics.drawLine(
+        self.box.br.position.x(),
+        self.box.br.position.y(),
+        self.box.tr.position.x(),
+        self.box.tr.position.y(),
+        0xFF6E3712,
+    );
+    graphics.drawLine(
+        self.box.br.position.x(),
+        self.box.br.position.y(),
+        self.box.bl.position.x(),
+        self.box.bl.position.y(),
+        0xFF6E3712,
+    );
+    graphics.drawLine(
+        self.box.tr.position.x(),
+        self.box.tr.position.y(),
+        self.box.bl.position.x(),
+        self.box.bl.position.y(),
+        0xFF6E3712,
+    );
 
     graphics.renderFrame();
 }
