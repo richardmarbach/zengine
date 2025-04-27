@@ -159,10 +159,11 @@ pub fn drawPolygon(x: f32, y: f32, vertices: []Vec2, color: u32) void {
     for (vertices, 0..) |vertex, i| {
         const nextVertex = if (i + 1 < numVertices) vertices[i + 1] else vertices[0];
         _ = c.lineColor(
-            x + vertex.x,
-            y + vertex.y,
-            x + nextVertex.x,
-            y + nextVertex.y,
+            renderer,
+            @intFromFloat(vertex.x()),
+            @intFromFloat(vertex.y()),
+            @intFromFloat(nextVertex.x()),
+            @intFromFloat(nextVertex.y()),
             color,
         );
     }

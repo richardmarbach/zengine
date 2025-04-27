@@ -39,7 +39,7 @@ pub fn init(alloc: std.mem.Allocator) !Self {
 
     // Top left
     try bodies.append(Body.init(
-        shapes.Shape{ .circle = .{ .radius = 50 } },
+        shapes.Shape{ .box = try shapes.Box.init(alloc, 200, 50) },
         @floatFromInt(graphics.width() / 2),
         @floatFromInt(graphics.height() / 2),
         1.0,
@@ -51,6 +51,9 @@ pub fn init(alloc: std.mem.Allocator) !Self {
 }
 
 pub fn deinit(self: *Self) void {
+    for (self.bodies.items) |*body| {
+        body.deinit();
+    }
     self.bodies.deinit();
     graphics.closeWindow();
 }
@@ -115,10 +118,11 @@ pub fn update(self: *Self) void {
         // Push
         body.addForce(&self.pushForce);
 
-        body.addForce(&force.drag(body, 0.003));
-        body.addForce(&force.weight(body, 9.8 * physicsConstants.PIXELS_PER_METER));
+        // body.addForce(&force.drag(body, 0.003));
+        // body.addForce(&force.weight(body, 9.8 * physicsConstants.PIXELS_PER_METER));
 
-        body.integrate(deltaTime);
+        body.addTorque(200);
+        body.update(deltaTime);
     }
 
     for (self.bodies.items) |*body| {
@@ -143,6 +147,22 @@ pub fn update(self: *Self) void {
                     bounce.setX(-0.8);
                 }
             },
+            .box => |box| {
+                if (currentY >= graphics.height() - box.height / 2) {
+                    body.position.setY(@floatFromInt(graphics.height() - box.height / 2));
+                    bounce.setY(-0.8);
+                } else if (currentY < box.height / 2) {
+                    body.position.setY(@floatFromInt(box.height / 2));
+                    bounce.setY(-0.8);
+                }
+                if (currentX > graphics.width() - box.width / 2) {
+                    body.position.setX(@floatFromInt(graphics.width() - box.width / 2));
+                    bounce.setX(-0.8);
+                } else if (currentX < box.width / 2) {
+                    body.position.setX(@floatFromInt(box.width / 2));
+                    bounce.setX(-0.8);
+                }
+            },
             else => {},
         }
         body.velocity = body.velocity.mul(&bounce);
@@ -154,7 +174,8 @@ pub fn render(self: *const Self) void {
 
     for (self.bodies.items) |body| {
         switch (body.shape) {
-            .circle => |circle| graphics.drawCircle(body.position.x(), body.position.y(), circle.radius, 0, 0xFFFFFFFF),
+            .circle => |circle| graphics.drawCircle(body.position.x(), body.position.y(), circle.radius, body.rotation, 0xFFFFFFFF),
+            .box => |box| graphics.drawPolygon(body.position.x(), body.position.y(), box.worldVertices.items, 0xFFFFFFFF),
             else => @panic("Shape not supported yet"),
         }
     }

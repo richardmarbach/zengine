@@ -36,6 +36,18 @@ pub fn Vec2(comptime Scalar: type) type {
             v.v[1] = s;
         }
 
+        pub inline fn rotate(v: *const VecN, angle: Scalar) VecN {
+            const cos = @cos(angle);
+            const sin = @sin(angle);
+
+            return .{
+                .v = .{
+                    v.x() * cos - v.y() * sin,
+                    v.x() * sin + v.y() * cos,
+                },
+            };
+        }
+
         pub const add = Shared.add;
         pub const sub = Shared.sub;
         pub const mul = Shared.mul;
