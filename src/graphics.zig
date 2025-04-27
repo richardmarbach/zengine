@@ -1,3 +1,7 @@
+const std = @import("std");
+const math = std.math;
+const builtin = @import("builtin");
+
 const c = @cImport({
     @cDefine("SDL_DISABLE_OLD_NAMES", {});
     @cInclude("SDL3/SDL.h");
@@ -5,11 +9,8 @@ const c = @cImport({
     @cInclude("SDL3_gfxPrimitives.h");
 });
 
-const std = @import("std");
-const math = std.math;
 const Vec2 = @import("physics/vec.zig").Vec2(f32);
 
-const builtin = @import("builtin");
 const native_endian = builtin.cpu.arch.endian();
 
 var windowWidth: u32 = 0;
@@ -106,7 +107,7 @@ pub fn drawFillCircle(x: f32, y: f32, radius: f32, color: u32) void {
 }
 
 pub fn drawRect(x: f32, y: f32, w: f32, h: f32, color: u32) void {
-    c.lineColor(
+    _ = c.lineColor(
         renderer,
         @intFromFloat(x - w / 2.0),
         @intFromFloat(y - h / 2.0),
@@ -114,7 +115,7 @@ pub fn drawRect(x: f32, y: f32, w: f32, h: f32, color: u32) void {
         @intFromFloat(y - h / 2.0),
         color,
     );
-    c.lineColor(
+    _ = c.lineColor(
         renderer,
         @intFromFloat(x + w / 2.0),
         @intFromFloat(y - h / 2.0),
@@ -122,7 +123,7 @@ pub fn drawRect(x: f32, y: f32, w: f32, h: f32, color: u32) void {
         @intFromFloat(y + h / 2.0),
         color,
     );
-    c.lineColor(
+    _ = c.lineColor(
         renderer,
         @intFromFloat(x + w / 2.0),
         @intFromFloat(y + h / 2.0),
@@ -130,7 +131,7 @@ pub fn drawRect(x: f32, y: f32, w: f32, h: f32, color: u32) void {
         @intFromFloat(y + h / 2.0),
         color,
     );
-    c.lineColor(
+    _ = c.lineColor(
         renderer,
         @intFromFloat(x - w / 2.0),
         @intFromFloat(y + h / 2.0),
@@ -149,6 +150,36 @@ pub fn drawFillRect(x: f32, y: f32, w: f32, h: f32, color: u32) void {
         @intFromFloat(y + h / 2.0),
         color,
     );
+}
+
+pub fn drawPolygon(x: f32, y: f32, vertices: []Vec2, color: u32) void {
+    const numVertices = vertices.len;
+    if (numVertices == 0) return;
+
+    for (vertices, 0..) |vertex, i| {
+        const nextVertex = if (i + 1 < numVertices) vertices[i + 1] else vertices[0];
+        _ = c.lineColor(
+            x + vertex.x,
+            y + vertex.y,
+            x + nextVertex.x,
+            y + nextVertex.y,
+            color,
+        );
+    }
+    _ = c.filledCircleColor(renderer, @intFromFloat(x), @intFromFloat(y), 1, color);
+}
+
+pub fn drawFillPolygon(alloc: std.mem.Allocator, x: f32, y: f32, vertices: []Vec2, color: u32) !void {
+    const vx = try alloc.alloc(i16, vertices.len);
+    const vy = try alloc.alloc(i16, vertices.len);
+
+    for (vertices, 0..) |vertex, i| {
+        vx[i] = @intFromFloat(vertex.x());
+        vy[i] = @intFromFloat(vertex.y());
+    }
+
+    _ = c.filledPolygonColor(renderer, vx.ptr, vy.ptr, vertices.len, color);
+    _ = c.filledCircleColor(renderer, @intFromFloat(x), @intFromFloat(y), 1, 0xFF000000);
 }
 
 pub fn drawTexture(x: f32, y: f32, w: f32, h: f32, rotation: f32, texture: *c.SDL_Texture) void {
