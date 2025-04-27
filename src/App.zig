@@ -1,21 +1,22 @@
+const std = @import("std");
+
+const graphics = @import("graphics.zig");
+const physicsConstants = @import("physics/constants.zig");
+const force = @import("physics/force.zig");
+const Body = @import("physics/Body.zig");
+
 const c = @cImport({
     @cDefine("SDL_DISABLE_OLD_NAMES", {});
     @cInclude("SDL3/SDL.h");
     @cInclude("SDL3/SDL_revision.h");
 });
 
-const std = @import("std");
 const Vec2 = @import("physics/vec.zig").Vec2(f32);
-const graphics = @import("graphics.zig");
-const Particle = @import("physics/Particle.zig");
-const physicsConstants = @import("physics/constants.zig");
-const force = @import("physics/force.zig");
-
 const Box = struct {
-    tl: *Particle,
-    tr: *Particle,
-    bl: *Particle,
-    br: *Particle,
+    tl: *Body,
+    tr: *Body,
+    bl: *Body,
+    br: *Body,
     size: f32,
     diagonal: f32,
     k: f32,
@@ -25,7 +26,7 @@ const Self = @This();
 
 running: bool = true,
 alloc: std.mem.Allocator,
-particles: std.ArrayList(Particle),
+bodies: std.ArrayList(Body),
 pushForce: Vec2 = Vec2.init(0, 0),
 box: Box,
 
@@ -34,28 +35,28 @@ timePreviousFrame: u64 = 0,
 pub fn init(alloc: std.mem.Allocator) !Self {
     try graphics.openWindow();
 
-    var particles = std.ArrayList(Particle).init(alloc);
+    var bodies = std.ArrayList(Body).init(alloc);
 
     const start = Vec2.init(600, 800);
     const size: f32 = 100;
 
     // Top left
-    try particles.append(Particle.init(start.x(), start.y(), 2, 5));
+    try bodies.append(Body.init(start.x(), start.y(), 2, 5));
     // Top Right
-    try particles.append(Particle.init(start.x() + size, start.y(), 2, 5));
+    try bodies.append(Body.init(start.x() + size, start.y(), 2, 5));
     // Bottom right
-    try particles.append(Particle.init(start.x() + size, start.y() + size, 2, 5));
+    try bodies.append(Body.init(start.x() + size, start.y() + size, 2, 5));
     // Bottom left
-    try particles.append(Particle.init(start.x(), start.y() + size, 2, 5));
+    try bodies.append(Body.init(start.x(), start.y() + size, 2, 5));
 
     return .{
         .alloc = alloc,
-        .particles = particles,
+        .bodies = bodies,
         .box = Box{
-            .tl = &particles.items[0],
-            .tr = &particles.items[1],
-            .br = &particles.items[2],
-            .bl = &particles.items[3],
+            .tl = &bodies.items[0],
+            .tr = &bodies.items[1],
+            .br = &bodies.items[2],
+            .bl = &bodies.items[3],
             .size = 100,
             .diagonal = @sqrt(100.0 * 100.0 + 100.0 * 100.0),
             .k = 1500,
@@ -64,7 +65,7 @@ pub fn init(alloc: std.mem.Allocator) !Self {
 }
 
 pub fn deinit(self: *Self) void {
-    self.particles.deinit();
+    self.bodies.deinit();
     graphics.closeWindow();
 }
 
@@ -95,7 +96,7 @@ pub fn input(self: *Self) !void {
             },
             c.SDL_EVENT_MOUSE_BUTTON_DOWN => {
                 if (event.button.button == c.SDL_BUTTON_LEFT) {
-                    try self.particles.append(Particle.init(
+                    try self.bodies.append(Body.init(
                         event.button.x,
                         event.button.y,
                         1,
@@ -125,76 +126,76 @@ pub fn update(self: *Self) void {
     self.timePreviousFrame = c.SDL_GetTicks();
 
     // right vertical
-    const trbr = force.springParticle(self.box.tr, self.box.br, self.box.size, self.box.k);
+    const trbr = force.springBody(self.box.tr, self.box.br, self.box.size, self.box.k);
     self.box.tr.addForce(&trbr);
     self.box.br.addForce(&trbr.negate());
 
     // left vertical
-    const tlbl = force.springParticle(self.box.tl, self.box.bl, self.box.size, self.box.k);
+    const tlbl = force.springBody(self.box.tl, self.box.bl, self.box.size, self.box.k);
     self.box.tl.addForce(&tlbl);
     self.box.bl.addForce(&tlbl.negate());
 
     // Bottom horizontal
-    const brbl = force.springParticle(self.box.br, self.box.bl, self.box.size, self.box.k);
+    const brbl = force.springBody(self.box.br, self.box.bl, self.box.size, self.box.k);
     self.box.br.addForce(&brbl);
     self.box.bl.addForce(&brbl.negate());
 
     // Top horizontal
-    const trtl = force.springParticle(self.box.tr, self.box.tl, self.box.size, self.box.k);
+    const trtl = force.springBody(self.box.tr, self.box.tl, self.box.size, self.box.k);
     self.box.tr.addForce(&trtl);
     self.box.tl.addForce(&trtl.negate());
 
     // Diagonal
-    const tlbr = force.springParticle(self.box.tl, self.box.br, self.box.diagonal, self.box.k);
+    const tlbr = force.springBody(self.box.tl, self.box.br, self.box.diagonal, self.box.k);
     self.box.tl.addForce(&tlbr);
     self.box.br.addForce(&tlbr.negate());
 
-    const trbl = force.springParticle(self.box.tr, self.box.bl, self.box.diagonal, self.box.k);
+    const trbl = force.springBody(self.box.tr, self.box.bl, self.box.diagonal, self.box.k);
     self.box.tr.addForce(&trbl);
     self.box.bl.addForce(&trbl.negate());
 
-    for (self.particles.items) |*particle| {
+    for (self.bodies.items) |*body| {
         // Push
-        particle.addForce(&self.pushForce);
+        body.addForce(&self.pushForce);
 
-        particle.addForce(&force.drag(particle, 0.003));
-        particle.addForce(&force.weight(particle, 9.8 * physicsConstants.PIXELS_PER_METER));
+        body.addForce(&force.drag(body, 0.003));
+        body.addForce(&force.weight(body, 9.8 * physicsConstants.PIXELS_PER_METER));
 
-        particle.integrate(deltaTime);
+        body.integrate(deltaTime);
 
         var bounce = Vec2.init(1, 1);
-        const currentX: i32 = @intFromFloat(particle.position.x());
-        const currentY: i32 = @intFromFloat(particle.position.y());
+        const currentX: i32 = @intFromFloat(body.position.x());
+        const currentY: i32 = @intFromFloat(body.position.y());
 
-        if (currentY > graphics.height() - particle.radius) {
-            particle.position.setY(@floatFromInt(graphics.height() - particle.radius * 2));
+        if (currentY > graphics.height() - body.radius) {
+            body.position.setY(@floatFromInt(graphics.height() - body.radius * 2));
             bounce.setY(-0.8);
         }
-        if (currentY < particle.radius) {
-            particle.position.setY(@floatFromInt(particle.radius));
+        if (currentY < body.radius) {
+            body.position.setY(@floatFromInt(body.radius));
             bounce.setY(-0.8);
         }
 
-        if (currentX > graphics.width() - particle.radius) {
-            particle.position.setX(@floatFromInt(graphics.width() - particle.radius));
+        if (currentX > graphics.width() - body.radius) {
+            body.position.setX(@floatFromInt(graphics.width() - body.radius));
             bounce.setX(-0.8);
         }
-        if (currentX < particle.radius) {
-            particle.position.setX(@floatFromInt(particle.radius));
+        if (currentX < body.radius) {
+            body.position.setX(@floatFromInt(body.radius));
             bounce.setX(-0.8);
         }
-        particle.velocity = particle.velocity.mul(&bounce);
+        body.velocity = body.velocity.mul(&bounce);
     }
 }
 
 pub fn render(self: *const Self) void {
     graphics.clearScreen(0xFF3D3D3C);
 
-    for (self.particles.items) |particle| {
+    for (self.bodies.items) |body| {
         graphics.drawFillCircle(
-            particle.position.x(),
-            particle.position.y(),
-            @floatFromInt(particle.radius),
+            body.position.x(),
+            body.position.y(),
+            @floatFromInt(body.radius),
             0xFFFFFFFF,
         );
     }
