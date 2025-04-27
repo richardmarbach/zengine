@@ -78,14 +78,14 @@ pub fn drawLine(x0: f32, y0: f32, x1: f32, y1: f32, color: u32) void {
 }
 
 pub fn drawCircle(x: f32, y: f32, radius: f32, angle: f32, color: u32) void {
-    c.circleColor(
+    _ = c.circleColor(
         renderer,
         @intFromFloat(x),
         @intFromFloat(y),
         @intFromFloat(radius),
         color,
     );
-    c.lineColor(
+    _ = c.lineColor(
         renderer,
         @intFromFloat(x),
         @intFromFloat(y),
