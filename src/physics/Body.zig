@@ -15,7 +15,6 @@ sumForces: Vec2 = Vec2.init(0, 0),
 rotation: f32,
 angularVelocity: f32,
 angularAcceleration: f32,
-I: f32,
 invI: f32,
 sumTorque: f32 = 0,
 
@@ -34,7 +33,6 @@ pub fn init(shape: Shape, x: f32, y: f32, mass: f32) Self {
         .rotation = 0,
         .angularVelocity = 0,
         .angularAcceleration = 0,
-        .I = I,
         .invI = if (I == 0) 0 else 1 / I,
     };
 }

@@ -42,8 +42,8 @@ pub fn Vec2(comptime Scalar: type) type {
 
             return .{
                 .v = .{
-                    v.x() * cos - v.y() * sin,
-                    v.x() * sin + v.y() * cos,
+                    @reduce(.Add, v.mul(&VecN.init(cos, -sin)).v),
+                    @reduce(.Add, v.mul(&VecN.init(sin, cos)).v),
                 },
             };
         }

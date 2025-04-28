@@ -88,10 +88,8 @@ pub const Shape = union(ShapeType) {
     pub fn momentOfInertia(self: *const Shape) f32 {
         return switch (self.*) {
             .circle => |c| return c.radius * c.radius * 0.5,
-            .box => |b| {
-                return (1.0 / 12.0) * @as(f32, @floatFromInt((b.width * b.width * b.height * b.height)));
-            },
-            else => 0,
+            .box => |b| return (1.0 / 12.0) * @as(f32, @floatFromInt(b.width * b.width + b.height * b.height)),
+            .polygon => 0,
         };
     }
 
