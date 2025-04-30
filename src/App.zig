@@ -78,7 +78,7 @@ pub fn input(self: *Self) !void {
             c.SDL_EVENT_MOUSE_BUTTON_DOWN => {
                 if (event.button.button == c.SDL_BUTTON_LEFT) {
                     try self.bodies.append(Body.init(
-                        shapes.Shape{ .circle = .{ .radius = 50 } },
+                        shapes.Shape{ .circle = .{ .radius = 10 } },
                         event.button.x,
                         event.button.y,
                         1,
@@ -111,7 +111,7 @@ pub fn update(self: *Self) void {
         body.addForce(&self.pushForce);
 
         body.addForce(&force.drag(body, 0.003));
-        body.addForce(&force.weight(body, 9.8 * physicsConstants.PIXELS_PER_METER));
+        // body.addForce(&force.weight(body, 9.8 * physicsConstants.PIXELS_PER_METER));
 
         // body.addTorque(200);
         body.update(deltaTime);
@@ -122,6 +122,7 @@ pub fn update(self: *Self) void {
             var contact: collisions.Contact = undefined;
             if (collisions.isColliding(a, b, &contact)) {
                 contact.resolvePenetration();
+                contact.resolveCollision();
             }
         }
     }

@@ -16,9 +16,11 @@ sumForces: Vec2 = Vec2.init(0, 0),
 rotation: f32,
 angularVelocity: f32,
 angularAcceleration: f32,
+
 invI: f32,
 sumTorque: f32 = 0,
 
+restitution: f32 = 0.0,
 shape: Shape,
 
 pub fn init(shape: Shape, x: f32, y: f32, mass: f32) Self {
@@ -44,6 +46,12 @@ pub fn deinit(self: *Self) void {
 
 pub inline fn isStatic(self: *const Self) bool {
     return std.math.approxEqAbs(f32, self.mass, 0.0, std.math.floatEpsAt(f32, 0));
+}
+
+pub inline fn applyImpulse(self: *Self, J: *const Vec2) void {
+    if (self.isStatic()) return;
+
+    self.velocity = self.velocity.add(&J.mulScalar(self.invMass));
 }
 
 pub inline fn addTorque(self: *Self, torque: f32) void {

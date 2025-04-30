@@ -25,6 +25,17 @@ pub const Contact = struct {
         self.a.position = self.a.position.sub(&self.normal.mulScalar(da));
         self.b.position = self.b.position.add(&self.normal.mulScalar(db));
     }
+
+    pub fn resolveCollision(self: *Contact) void {
+        const e = @min(self.a.restitution, self.b.restitution);
+        const vRel = self.a.velocity.sub(&self.b.velocity);
+
+        const impulse = -(1 + e) * vRel.dot(&self.normal) / (self.a.invMass + self.b.invMass);
+        const Jn = self.normal.mulScalar(impulse);
+
+        self.a.applyImpulse(&Jn);
+        self.b.applyImpulse(&Jn.negate());
+    }
 };
 
 pub fn isColliding(a: *Body, b: *Body, contact: *Contact) bool {
