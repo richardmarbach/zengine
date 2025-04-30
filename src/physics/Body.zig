@@ -1,6 +1,7 @@
 const vec = @import("vec.zig");
 const Vec2 = vec.Vec2(f32);
 const Shape = @import("shapes.zig").Shape;
+const std = @import("std");
 
 const Self = @This();
 
@@ -41,6 +42,10 @@ pub fn deinit(self: *Self) void {
     self.shape.deinit();
 }
 
+pub inline fn isStatic(self: *const Self) bool {
+    return std.math.approxEqAbs(f32, self.mass, 0.0, std.math.floatEpsAt(f32, 0));
+}
+
 pub inline fn addTorque(self: *Self, torque: f32) void {
     self.sumTorque += torque;
 }
@@ -56,6 +61,8 @@ pub fn update(self: *Self, dt: f32) void {
 }
 
 pub fn integrate(self: *Self, dt: f32) void {
+    if (self.isStatic()) return;
+
     self.acceleration = self.sumForces.mulScalar(self.invMass);
 
     self.velocity = self.velocity.add(&self.acceleration.mulScalar(dt));
@@ -65,6 +72,8 @@ pub fn integrate(self: *Self, dt: f32) void {
 }
 
 pub fn integrateAngular(self: *Self, dt: f32) void {
+    if (self.isStatic()) return;
+
     self.angularAcceleration = self.sumTorque * self.invI;
     self.angularVelocity += self.angularAcceleration * dt;
     self.rotation += self.angularVelocity * dt;

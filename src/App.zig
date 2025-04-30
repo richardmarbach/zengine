@@ -5,6 +5,7 @@ const Body = @import("physics/Body.zig");
 const physicsConstants = @import("physics/constants.zig");
 const force = @import("physics/force.zig");
 const shapes = @import("physics/shapes.zig");
+const collisions = @import("physics/collision.zig");
 
 const c = @cImport({
     @cDefine("SDL_DISABLE_OLD_NAMES", {});
@@ -13,15 +14,6 @@ const c = @cImport({
 });
 
 const Vec2 = @import("physics/vec.zig").Vec2(f32);
-const Box = struct {
-    tl: *Body,
-    tr: *Body,
-    bl: *Body,
-    br: *Body,
-    size: f32,
-    diagonal: f32,
-    k: f32,
-};
 
 const Self = @This();
 
@@ -39,10 +31,10 @@ pub fn init(alloc: std.mem.Allocator) !Self {
 
     // Top left
     try bodies.append(Body.init(
-        shapes.Shape{ .box = try shapes.Box.init(alloc, 200, 50) },
+        shapes.Shape{ .circle = .{ .radius = 50 } },
         @floatFromInt(graphics.width() / 2),
         @floatFromInt(graphics.height() / 2),
-        1.0,
+        0.0,
     ));
     return .{
         .alloc = alloc,
@@ -86,7 +78,7 @@ pub fn input(self: *Self) !void {
             c.SDL_EVENT_MOUSE_BUTTON_DOWN => {
                 if (event.button.button == c.SDL_BUTTON_LEFT) {
                     try self.bodies.append(Body.init(
-                        shapes.Shape{ .circle = .{ .radius = 4 } },
+                        shapes.Shape{ .circle = .{ .radius = 50 } },
                         event.button.x,
                         event.button.y,
                         1,
@@ -118,11 +110,20 @@ pub fn update(self: *Self) void {
         // Push
         body.addForce(&self.pushForce);
 
-        // body.addForce(&force.drag(body, 0.003));
-        // body.addForce(&force.weight(body, 9.8 * physicsConstants.PIXELS_PER_METER));
+        body.addForce(&force.drag(body, 0.003));
+        body.addForce(&force.weight(body, 9.8 * physicsConstants.PIXELS_PER_METER));
 
-        body.addTorque(200);
+        // body.addTorque(200);
         body.update(deltaTime);
+    }
+
+    for (self.bodies.items, 0..) |*a, i| {
+        for (self.bodies.items[i + 1 ..]) |*b| {
+            var contact: collisions.Contact = undefined;
+            if (collisions.isColliding(a, b, &contact)) {
+                contact.resolvePenetration();
+            }
+        }
     }
 
     for (self.bodies.items) |*body| {
@@ -170,7 +171,7 @@ pub fn update(self: *Self) void {
 }
 
 pub fn render(self: *const Self) void {
-    graphics.clearScreen(0xFF3D3D3C);
+    graphics.clearScreen(0xFF0F0721);
 
     for (self.bodies.items) |body| {
         switch (body.shape) {
