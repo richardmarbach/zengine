@@ -113,7 +113,7 @@ inline fn isCollidingPolyPoly(a: *Body, b: *Body, verticesA: []Vec2, verticesB: 
 }
 
 fn findMinSeparation(verticesA: []Vec2, verticesB: []Vec2, axisOut: *Vec2, pointOut: *Vec2) f32 {
-    var separation = std.math.floatMin(f32);
+    var separation = -std.math.floatMax(f32);
 
     for (verticesA, 0..) |va, i| {
         const edge = shapes.edgeAt(verticesA, i);

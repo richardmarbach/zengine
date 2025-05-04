@@ -96,6 +96,8 @@ pub fn input(self: *Self) !void {
 }
 
 pub fn update(self: *Self) void {
+    graphics.clearScreen(0xFF0F0721);
+
     if (self.timePreviousFrame + physicsConstants.MS_PER_FRAME > c.SDL_GetTicks()) {
         const timeElapsed = physicsConstants.MS_PER_FRAME - (c.SDL_GetTicks() - self.timePreviousFrame);
         c.SDL_Delay(@truncate(timeElapsed));
@@ -126,8 +128,12 @@ pub fn update(self: *Self) void {
         for (self.bodies.items[i + 1 ..]) |*b| {
             var contact: collisions.Contact = undefined;
             if (collisions.isColliding(a, b, &contact)) {
-                contact.resolvePenetration();
-                contact.resolveCollision();
+                // contact.resolvePenetration();
+                // contact.resolveCollision();
+                graphics.drawFillCircle(contact.start.x(), contact.start.y(), 3, 0xFFFF00FF);
+                graphics.drawFillCircle(contact.end.x(), contact.end.y(), 3, 0xFFFF00FF);
+                const normalLineEnd = contact.start.add(&contact.normal.mulScalar(15));
+                graphics.drawLine(contact.start.x(), contact.start.y(), normalLineEnd.x(), normalLineEnd.y(), 0xFFFF00FF);
             }
         }
     }
@@ -177,7 +183,7 @@ pub fn update(self: *Self) void {
 }
 
 pub fn render(self: *const Self) void {
-    graphics.clearScreen(0xFF0F0721);
+    // graphics.clearScreen(0xFF0F0721);
 
     for (self.bodies.items) |body| {
         switch (body.shape) {
