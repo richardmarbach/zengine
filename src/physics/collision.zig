@@ -26,6 +26,9 @@ pub const Contact = struct {
 
         self.a.position = self.a.position.sub(&self.normal.mulScalar(da));
         self.b.position = self.b.position.add(&self.normal.mulScalar(db));
+
+        self.a.shape.updateVertices(&self.a.position, self.a.rotation);
+        self.b.shape.updateVertices(&self.b.position, self.b.rotation);
     }
 
     pub fn resolveCollision(self: *Contact) void {

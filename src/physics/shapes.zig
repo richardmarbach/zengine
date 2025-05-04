@@ -107,9 +107,8 @@ pub const Shape = union(ShapeType) {
     }
 
     fn localToWorldVertices(localVertices: []Vec2, position: *const Vec2, angle: f32, worldVertices: []Vec2) void {
-        for (localVertices, 0..) |vertex, i| {
-            const worldCordinate = vertex.rotate(angle).add(position);
-            worldVertices[i] = worldCordinate;
+        for (localVertices, worldVertices) |local, *worldVertex| {
+            worldVertex.* = local.rotate(angle).add(position);
         }
     }
 };

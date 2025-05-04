@@ -43,9 +43,9 @@ pub fn init(alloc: std.mem.Allocator) !Self {
         1.0,
     ));
 
-    for (bodies.items) |*body| {
-        body.angularVelocity = 0.4;
-    }
+    // for (bodies.items) |*body| {
+    //     body.angularVelocity = 0.4;
+    // }
 
     return .{
         .alloc = alloc,
@@ -96,7 +96,7 @@ pub fn input(self: *Self) !void {
 }
 
 pub fn update(self: *Self) void {
-    graphics.clearScreen(0xFF0F0721);
+    // graphics.clearScreen(0xFF0F0721);
 
     if (self.timePreviousFrame + physicsConstants.MS_PER_FRAME > c.SDL_GetTicks()) {
         const timeElapsed = physicsConstants.MS_PER_FRAME - (c.SDL_GetTicks() - self.timePreviousFrame);
@@ -128,62 +128,20 @@ pub fn update(self: *Self) void {
         for (self.bodies.items[i + 1 ..]) |*b| {
             var contact: collisions.Contact = undefined;
             if (collisions.isColliding(a, b, &contact)) {
-                // contact.resolvePenetration();
-                // contact.resolveCollision();
-                graphics.drawFillCircle(contact.start.x(), contact.start.y(), 3, 0xFFFF00FF);
-                graphics.drawFillCircle(contact.end.x(), contact.end.y(), 3, 0xFFFF00FF);
-                const normalLineEnd = contact.start.add(&contact.normal.mulScalar(15));
-                graphics.drawLine(contact.start.x(), contact.start.y(), normalLineEnd.x(), normalLineEnd.y(), 0xFFFF00FF);
+                contact.resolvePenetration();
+                contact.resolveCollision();
+
+                // graphics.drawFillCircle(contact.start.x(), contact.start.y(), 3, 0xFFFF00FF);
+                // graphics.drawFillCircle(contact.end.x(), contact.end.y(), 3, 0xFFFF00FF);
+                // const normalLineEnd = contact.start.add(&contact.normal.mulScalar(15));
+                // graphics.drawLine(contact.start.x(), contact.start.y(), normalLineEnd.x(), normalLineEnd.y(), 0xFFFF00FF);
             }
         }
-    }
-
-    for (self.bodies.items) |*body| {
-        var bounce = Vec2.init(1, 1);
-        const currentX: i32 = @intFromFloat(body.position.x());
-        const currentY: i32 = @intFromFloat(body.position.y());
-        switch (body.shape) {
-            .circle => |circle| {
-                if (currentY + circle.radiusW(i32) >= graphics.height()) {
-                    body.position.setY(@floatFromInt(graphics.height() - circle.radiusW(u32)));
-                    bounce.setY(-0.8);
-                } else if (currentY < circle.radiusW(u32)) {
-                    body.position.setY(circle.radius);
-                    bounce.setY(-0.8);
-                }
-
-                if (currentX > graphics.width() - circle.radiusW(u32)) {
-                    body.position.setX(@floatFromInt(graphics.width() - circle.radiusW(u32)));
-                    bounce.setX(-0.8);
-                } else if (currentX < circle.radiusW(i32)) {
-                    body.position.setX(circle.radius);
-                    bounce.setX(-0.8);
-                }
-            },
-            .box => |box| {
-                if (currentY >= graphics.height() - box.height / 2) {
-                    body.position.setY(@floatFromInt(graphics.height() - box.height / 2));
-                    bounce.setY(-0.8);
-                } else if (currentY < box.height / 2) {
-                    body.position.setY(@floatFromInt(box.height / 2));
-                    bounce.setY(-0.8);
-                }
-                if (currentX > graphics.width() - box.width / 2) {
-                    body.position.setX(@floatFromInt(graphics.width() - box.width / 2));
-                    bounce.setX(-0.8);
-                } else if (currentX < box.width / 2) {
-                    body.position.setX(@floatFromInt(box.width / 2));
-                    bounce.setX(-0.8);
-                }
-            },
-            else => {},
-        }
-        body.velocity = body.velocity.mul(&bounce);
     }
 }
 
 pub fn render(self: *const Self) void {
-    // graphics.clearScreen(0xFF0F0721);
+    graphics.clearScreen(0xFF0F0721);
 
     for (self.bodies.items) |body| {
         switch (body.shape) {
