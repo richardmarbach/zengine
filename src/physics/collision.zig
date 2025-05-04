@@ -1,6 +1,8 @@
+const std = @import("std");
 const vec = @import("vec.zig");
 const Vec2 = vec.Vec2(f32);
-const Shape = @import("shapes.zig").Shape;
+const shapes = @import("shapes.zig");
+const Shape = shapes.Shape;
 const Body = @import("Body.zig");
 
 pub const Contact = struct {
@@ -44,7 +46,16 @@ pub fn isColliding(a: *Body, b: *Body, contact: *Contact) bool {
             .circle => |bShape| isCollidingCircleCircle(a, b, aShape.radius, bShape.radius, contact),
             else => false,
         },
-        else => false,
+        .box => |aShape| switch (b.shape) {
+            .box => |bShape| isCollidingPolyPoly(a, b, aShape.worldVertices.items, bShape.worldVertices.items, contact),
+            .polygon => |bShape| isCollidingPolyPoly(a, b, aShape.worldVertices.items, bShape.worldVertices.items, contact),
+            else => false,
+        },
+        .polygon => |aShape| switch (b.shape) {
+            .box => |bShape| isCollidingPolyPoly(a, b, aShape.worldVertices.items, bShape.worldVertices.items, contact),
+            .polygon => |bShape| isCollidingPolyPoly(a, b, aShape.worldVertices.items, bShape.worldVertices.items, contact),
+            else => false,
+        },
     };
 }
 
@@ -66,4 +77,64 @@ inline fn isCollidingCircleCircle(a: *Body, b: *Body, ra: f32, rb: f32, contact:
     }
 
     return isCollision;
+}
+
+inline fn isCollidingPolyPoly(a: *Body, b: *Body, verticesA: []Vec2, verticesB: []Vec2, contact: *Contact) bool {
+    var aAxis = Vec2.init(0, 0);
+    var aPoint = Vec2.init(0, 0);
+    const abSeparation = findMinSeparation(verticesA, verticesB, &aAxis, &aPoint);
+
+    if (abSeparation > 0) {
+        return false;
+    }
+
+    var bAxis = Vec2.init(0, 0);
+    var bPoint = Vec2.init(0, 0);
+    const baSeparation = findMinSeparation(verticesB, verticesA, &bAxis, &bPoint);
+    if (baSeparation > 0) {
+        return false;
+    }
+
+    contact.a = a;
+    contact.b = b;
+
+    if (abSeparation > baSeparation) {
+        contact.depth = -abSeparation;
+        contact.normal = aAxis.normal();
+        contact.start = aPoint;
+        contact.end = aPoint.add(&contact.normal.mulScalar(contact.depth));
+    } else {
+        contact.depth = -baSeparation;
+        contact.normal = bAxis.normal().negate();
+        contact.start = bPoint.sub(&contact.normal.mulScalar(contact.depth));
+        contact.end = bPoint;
+    }
+    return true;
+}
+
+fn findMinSeparation(verticesA: []Vec2, verticesB: []Vec2, axisOut: *Vec2, pointOut: *Vec2) f32 {
+    var separation = std.math.floatMin(f32);
+
+    for (verticesA, 0..) |va, i| {
+        const edge = shapes.edgeAt(verticesA, i);
+        const normal = edge.normal();
+        var minSep = std.math.floatMax(f32);
+        var minVertex: Vec2 = undefined;
+
+        for (verticesB) |vb| {
+            const projection = normal.dot(&vb.sub(&va));
+            if (projection < minSep) {
+                minSep = projection;
+                minVertex = vb;
+            }
+        }
+
+        if (minSep > separation) {
+            separation = minSep;
+            axisOut.* = edge;
+            pointOut.* = minVertex;
+        }
+    }
+
+    return separation;
 }

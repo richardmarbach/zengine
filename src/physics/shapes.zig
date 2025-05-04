@@ -3,6 +3,11 @@ const Vec2 = @import("vec.zig").Vec2(f32);
 
 pub const Vertices = std.ArrayList(Vec2);
 
+pub inline fn edgeAt(vertices: []Vec2, i: usize) Vec2 {
+    const nextEdge = if (i + 1 >= vertices.len) 0 else i + 1;
+    return vertices[nextEdge].sub(&vertices[i]);
+}
+
 pub const Circle = struct {
     radius: f32,
 

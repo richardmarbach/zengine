@@ -29,13 +29,24 @@ pub fn init(alloc: std.mem.Allocator) !Self {
 
     var bodies = std.ArrayList(Body).init(alloc);
 
-    // Top left
     try bodies.append(Body.init(
-        shapes.Shape{ .circle = .{ .radius = 50 } },
+        shapes.Shape{ .box = try shapes.Box.init(alloc, 100, 100) },
         @floatFromInt(graphics.width() / 2),
         @floatFromInt(graphics.height() / 2),
         0.0,
     ));
+
+    try bodies.append(Body.init(
+        shapes.Shape{ .box = try shapes.Box.init(alloc, 100, 100) },
+        @floatFromInt(100),
+        @floatFromInt(100),
+        1.0,
+    ));
+
+    for (bodies.items) |*body| {
+        body.angularVelocity = 0.4;
+    }
+
     return .{
         .alloc = alloc,
         .bodies = bodies,
@@ -75,15 +86,9 @@ pub fn input(self: *Self) !void {
                     else => {},
                 }
             },
-            c.SDL_EVENT_MOUSE_BUTTON_DOWN => {
-                if (event.button.button == c.SDL_BUTTON_LEFT) {
-                    try self.bodies.append(Body.init(
-                        shapes.Shape{ .circle = .{ .radius = 10 } },
-                        event.button.x,
-                        event.button.y,
-                        1,
-                    ));
-                }
+            c.SDL_EVENT_MOUSE_MOTION => {
+                self.bodies.items[1].position.setX(event.motion.x);
+                self.bodies.items[1].position.setY(event.motion.y);
             },
             else => {},
         }
@@ -110,7 +115,7 @@ pub fn update(self: *Self) void {
         // Push
         body.addForce(&self.pushForce);
 
-        body.addForce(&force.drag(body, 0.003));
+        // body.addForce(&force.drag(body, 0.003));
         // body.addForce(&force.weight(body, 9.8 * physicsConstants.PIXELS_PER_METER));
 
         // body.addTorque(200);

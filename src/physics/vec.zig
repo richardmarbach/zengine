@@ -36,6 +36,10 @@ pub fn Vec2(comptime Scalar: type) type {
             v.v[1] = s;
         }
 
+        pub inline fn normal(v: *const VecN) VecN {
+            return VecN.init(v.y(), -v.x()).normalize();
+        }
+
         pub inline fn rotate(v: *const VecN, angle: Scalar) VecN {
             const cos = @cos(angle);
             const sin = @sin(angle);
