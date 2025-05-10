@@ -52,6 +52,10 @@ pub fn Vec2(comptime Scalar: type) type {
             };
         }
 
+        pub fn cross(a: *const VecN, b: *const VecN) Scalar {
+            return a.x() * b.y() - a.y() * b.x();
+        }
+
         pub const add = Shared.add;
         pub const sub = Shared.sub;
         pub const mul = Shared.mul;

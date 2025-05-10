@@ -37,6 +37,7 @@ pub fn init(shape: Shape, x: f32, y: f32, mass: f32) Self {
         .angularVelocity = 0,
         .angularAcceleration = 0,
         .invI = if (I == 0) 0 else 1 / I,
+        .restitution = 0,
     };
 }
 
@@ -52,6 +53,13 @@ pub inline fn applyImpulse(self: *Self, J: *const Vec2) void {
     if (self.isStatic()) return;
 
     self.velocity = self.velocity.add(&J.mulScalar(self.invMass));
+}
+
+pub inline fn applyImpulseAngular(self: *Self, J: *const Vec2, r: *const Vec2) void {
+    if (self.isStatic()) return;
+
+    self.velocity = self.velocity.add(&J.mulScalar(self.invMass));
+    self.angularVelocity += r.cross(J) * self.invI;
 }
 
 pub inline fn addTorque(self: *Self, torque: f32) void {

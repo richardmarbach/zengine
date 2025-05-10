@@ -32,14 +32,33 @@ pub const Contact = struct {
     }
 
     pub fn resolveCollision(self: *Contact) void {
-        const e = @min(self.a.restitution, self.b.restitution);
-        const vRel = self.a.velocity.sub(&self.b.velocity);
+        self.resolvePenetration();
 
-        const impulse = -(1 + e) * vRel.dot(&self.normal) / (self.a.invMass + self.b.invMass);
+        const e = @min(self.a.restitution, self.b.restitution);
+        const ra = self.end.sub(&self.a.position);
+        const rb = self.start.sub(&self.b.position);
+
+        const va = self.a.velocity.add(&Vec2.init(-self.a.angularVelocity * ra.y(), self.a.angularVelocity * ra.x()));
+        const vb = self.b.velocity.add(&Vec2.init(-self.b.angularVelocity * rb.y(), self.b.angularVelocity * rb.x()));
+        const vRel = va.sub(&vb);
+
+        // Collision impulse along the normal
+        const raCrossNormal = ra.cross(&self.normal);
+        const tbCrossNormal = rb.cross(&self.normal);
+        const impulse = -(1 + e) * vRel.dot(&self.normal) / (self.a.invMass + self.b.invMass + raCrossNormal * raCrossNormal * self.a.invI + tbCrossNormal * tbCrossNormal * self.b.invI);
         const Jn = self.normal.mulScalar(impulse);
 
-        self.a.applyImpulse(&Jn);
-        self.b.applyImpulse(&Jn.negate());
+        // Collision impulse along the tangent
+        const tangent = self.normal.normal();
+        const raCrossTangent = ra.cross(&tangent);
+        const rbCrossTangent = rb.cross(&tangent);
+        const angularImpulse = -(1 + e) * vRel.dot(&tangent) / (self.a.invMass + self.b.invMass + raCrossTangent * raCrossTangent * self.a.invI + rbCrossTangent * rbCrossTangent * self.b.invI);
+        const Jt = tangent.mulScalar(angularImpulse);
+
+        // Apply the total impulse
+        const J = Jn.add(&Jt);
+        self.a.applyImpulseAngular(&J, &ra);
+        self.b.applyImpulseAngular(&J.negate(), &rb);
     }
 };
 

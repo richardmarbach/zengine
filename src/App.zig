@@ -30,22 +30,32 @@ pub fn init(alloc: std.mem.Allocator) !Self {
     var bodies = std.ArrayList(Body).init(alloc);
 
     try bodies.append(Body.init(
-        shapes.Shape{ .box = try shapes.Box.init(alloc, 100, 100) },
+        shapes.Shape{ .box = try shapes.Box.init(alloc, graphics.width() - 20, 10) },
         @floatFromInt(graphics.width() / 2),
+        @floatFromInt(graphics.height() - 10),
+        0.0,
+    ));
+    try bodies.append(Body.init(
+        shapes.Shape{ .box = try shapes.Box.init(alloc, 10, graphics.height() - 30) },
+        5,
+        @floatFromInt(graphics.height() / 2),
+        0.0,
+    ));
+    try bodies.append(Body.init(
+        shapes.Shape{ .box = try shapes.Box.init(alloc, 10, graphics.height() - 30) },
+        @floatFromInt(graphics.width() - 5),
         @floatFromInt(graphics.height() / 2),
         0.0,
     ));
 
-    try bodies.append(Body.init(
+    var bigBox = Body.init(
         shapes.Shape{ .box = try shapes.Box.init(alloc, 100, 100) },
-        @floatFromInt(100),
-        @floatFromInt(100),
-        1.0,
-    ));
-
-    // for (bodies.items) |*body| {
-    //     body.angularVelocity = 0.4;
-    // }
+        @floatFromInt(graphics.width() / 2),
+        @floatFromInt(graphics.height() / 2),
+        0.0,
+    );
+    bigBox.rotation = 0.3;
+    try bodies.append(bigBox);
 
     return .{
         .alloc = alloc,
@@ -86,10 +96,22 @@ pub fn input(self: *Self) !void {
                     else => {},
                 }
             },
-            c.SDL_EVENT_MOUSE_MOTION => {
-                self.bodies.items[1].position.setX(event.motion.x);
-                self.bodies.items[1].position.setY(event.motion.y);
+            c.SDL_EVENT_MOUSE_BUTTON_DOWN => {
+                if (event.button.button == c.SDL_BUTTON_LEFT) {
+                    var box = Body.init(
+                        shapes.Shape{ .box = try shapes.Box.init(self.alloc, 40, 40) },
+                        event.button.x,
+                        event.button.y,
+                        1.0,
+                    );
+                    box.restitution = 0.5;
+                    try self.bodies.append(box);
+                }
             },
+            // c.SDL_EVENT_MOUSE_MOTION => {
+            //     self.bodies.items[1].position.setX(event.motion.x);
+            //     self.bodies.items[1].position.setY(event.motion.y);
+            // },
             else => {},
         }
     }
@@ -118,7 +140,7 @@ pub fn update(self: *Self) void {
         body.addForce(&self.pushForce);
 
         // body.addForce(&force.drag(body, 0.003));
-        // body.addForce(&force.weight(body, 9.8 * physicsConstants.PIXELS_PER_METER));
+        body.addForce(&force.weight(body, 9.8 * physicsConstants.PIXELS_PER_METER));
 
         // body.addTorque(200);
         body.update(deltaTime);
@@ -128,7 +150,6 @@ pub fn update(self: *Self) void {
         for (self.bodies.items[i + 1 ..]) |*b| {
             var contact: collisions.Contact = undefined;
             if (collisions.isColliding(a, b, &contact)) {
-                contact.resolvePenetration();
                 contact.resolveCollision();
 
                 // graphics.drawFillCircle(contact.start.x(), contact.start.y(), 3, 0xFFFF00FF);
