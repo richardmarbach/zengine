@@ -104,7 +104,7 @@ pub fn input(self: *Self) !void {
                         event.button.y,
                         1.0,
                     );
-                    box.restitution = 0.5;
+                    box.restitution = 0.05;
                     try self.bodies.append(box);
                 }
             },
@@ -139,7 +139,7 @@ pub fn update(self: *Self) void {
         // Push
         body.addForce(&self.pushForce);
 
-        // body.addForce(&force.drag(body, 0.003));
+        body.addForce(&force.friction(body, 30));
         body.addForce(&force.weight(body, 9.8 * physicsConstants.PIXELS_PER_METER));
 
         // body.addTorque(200);
