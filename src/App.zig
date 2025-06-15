@@ -17,6 +17,8 @@ const Vec2 = @import("physics/vec.zig").Vec2(f32);
 
 const Self = @This();
 
+const debug = true;
+
 running: bool = true,
 alloc: std.mem.Allocator,
 bodies: std.ArrayList(Body),
@@ -99,26 +101,24 @@ pub fn input(self: *Self) !void {
             c.SDL_EVENT_MOUSE_BUTTON_DOWN => {
                 if (event.button.button == c.SDL_BUTTON_LEFT) {
                     var box = Body.init(
-                        shapes.Shape{ .box = try shapes.Box.init(self.alloc, 40, 40) },
+                        shapes.Shape{ .circle = .{ .radius = 20 } },
                         event.button.x,
                         event.button.y,
                         1.0,
                     );
-                    box.restitution = 0.05;
+                    box.restitution = 0.5;
                     try self.bodies.append(box);
                 }
             },
-            // c.SDL_EVENT_MOUSE_MOTION => {
-            //     self.bodies.items[1].position.setX(event.motion.x);
-            //     self.bodies.items[1].position.setY(event.motion.y);
-            // },
             else => {},
         }
     }
 }
 
 pub fn update(self: *Self) void {
-    // graphics.clearScreen(0xFF0F0721);
+    if (debug) {
+        graphics.clearScreen(0xFF0F0721);
+    }
 
     if (self.timePreviousFrame + physicsConstants.MS_PER_FRAME > c.SDL_GetTicks()) {
         const timeElapsed = physicsConstants.MS_PER_FRAME - (c.SDL_GetTicks() - self.timePreviousFrame);
@@ -138,8 +138,8 @@ pub fn update(self: *Self) void {
     for (self.bodies.items) |*body| {
         // Push
         body.addForce(&self.pushForce);
-
-        body.addForce(&force.friction(body, 30));
+        //
+        // body.addForce(&force.friction(body, 30));
         body.addForce(&force.weight(body, 9.8 * physicsConstants.PIXELS_PER_METER));
 
         // body.addTorque(200);
@@ -152,23 +152,27 @@ pub fn update(self: *Self) void {
             if (collisions.isColliding(a, b, &contact)) {
                 contact.resolveCollision();
 
-                // graphics.drawFillCircle(contact.start.x(), contact.start.y(), 3, 0xFFFF00FF);
-                // graphics.drawFillCircle(contact.end.x(), contact.end.y(), 3, 0xFFFF00FF);
-                // const normalLineEnd = contact.start.add(&contact.normal.mulScalar(15));
-                // graphics.drawLine(contact.start.x(), contact.start.y(), normalLineEnd.x(), normalLineEnd.y(), 0xFFFF00FF);
+                if (debug) {
+                    graphics.drawFillCircle(contact.start.x(), contact.start.y(), 3, 0xFFFF00FF);
+                    graphics.drawFillCircle(contact.end.x(), contact.end.y(), 3, 0xFFFF00FF);
+                    const normalLineEnd = contact.start.add(&contact.normal.mulScalar(15));
+                    graphics.drawLine(contact.start.x(), contact.start.y(), normalLineEnd.x(), normalLineEnd.y(), 0xFFFF00FF);
+                }
             }
         }
     }
 }
 
 pub fn render(self: *const Self) void {
-    graphics.clearScreen(0xFF0F0721);
+    if (!debug) {
+        graphics.clearScreen(0xFF0F0721);
+    }
 
     for (self.bodies.items) |body| {
         switch (body.shape) {
             .circle => |circle| graphics.drawCircle(body.position.x(), body.position.y(), circle.radius, body.rotation, 0xFFFFFFFF),
             .box => |box| graphics.drawPolygon(body.position.x(), body.position.y(), box.worldVertices.items, 0xFFFFFFFF),
-            else => @panic("Shape not supported yet"),
+            .polygon => |poly| graphics.drawPolygon(body.position.x(), body.position.y(), poly.worldVertices.items, 0xFFFFFFFF),
         }
     }
 

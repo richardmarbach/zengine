@@ -194,3 +194,17 @@ pub fn drawTexture(x: f32, y: f32, w: f32, h: f32, rotation: f32, texture: *c.SD
     const rotationDeg = rotation * math.deg_per_rad;
     _ = c.SDL_RenderTextureRotated(renderer, texture, null, &destRect, rotationDeg, null, c.SDL_FLIP_NONE);
 }
+
+pub fn drawText(x: f32, y: f32, text: [:0]const u8) void {
+    _ = c.SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
+    _ = c.SDL_RenderDebugText(renderer, x, y, text);
+}
+
+pub fn drawFmtText(x: f32, y: f32, comptime fmt: []const u8, args: anytype) void {
+    var text: [512]u8 = undefined;
+    const output: [:0]const u8 = std.fmt.bufPrintZ(&text, fmt, args) catch blk: {
+        std.debug.print("Failed to fmt: " ++ fmt ++ "\n", args);
+        break :blk &[_:0]u8{ 'e', 'r', 'r', 'o', 'r' };
+    };
+    drawText(x, y, output);
+}

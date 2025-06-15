@@ -66,19 +66,117 @@ pub fn isColliding(a: *Body, b: *Body, contact: *Contact) bool {
     return switch (a.shape) {
         .circle => |aShape| switch (b.shape) {
             .circle => |bShape| isCollidingCircleCircle(a, b, aShape.radius, bShape.radius, contact),
-            else => false,
+            .box => |bShape| isCollidingCirclePoly(a, b, aShape.radius, bShape.worldVertices.items, contact),
+            .polygon => |bShape| isCollidingCirclePoly(a, b, aShape.radius, bShape.worldVertices.items, contact),
         },
         .box => |aShape| switch (b.shape) {
             .box => |bShape| isCollidingPolyPoly(a, b, aShape.worldVertices.items, bShape.worldVertices.items, contact),
             .polygon => |bShape| isCollidingPolyPoly(a, b, aShape.worldVertices.items, bShape.worldVertices.items, contact),
-            else => false,
+            .circle => |bShape| isCollidingCirclePoly(b, a, bShape.radius, aShape.worldVertices.items, contact),
         },
         .polygon => |aShape| switch (b.shape) {
             .box => |bShape| isCollidingPolyPoly(a, b, aShape.worldVertices.items, bShape.worldVertices.items, contact),
             .polygon => |bShape| isCollidingPolyPoly(a, b, aShape.worldVertices.items, bShape.worldVertices.items, contact),
-            else => false,
+            .circle => |bShape| isCollidingCirclePoly(b, a, bShape.radius, aShape.worldVertices.items, contact),
         },
     };
+}
+
+inline fn isCollidingCirclePoly(circle: *Body, poly: *Body, radius: f32, vertices: []Vec2, contact: *Contact) bool {
+    var distanceCircleEdge: f32 = -std.math.floatMax(f32);
+    var closestVertex = Vec2.init(0, 0);
+    var closestNextVertex = Vec2.init(0, 0);
+
+    for (vertices, 0..) |vertex, i| {
+        const edge = shapes.edgeAt(vertices, i);
+        const normal = edge.normal();
+
+        const circleCenter = circle.position.sub(&vertex);
+
+        const projection: f32 = circleCenter.dot(&normal);
+
+        if (projection > 0 and projection > distanceCircleEdge) {
+            distanceCircleEdge = projection;
+            closestVertex = vertex;
+            closestNextVertex = vertex.add(&edge);
+        } else {
+            // We're inside the polygon
+            if (projection > distanceCircleEdge) {
+                distanceCircleEdge = projection;
+                closestVertex = vertex;
+                closestNextVertex = vertex.add(&edge);
+            }
+        }
+    }
+
+    const inside = distanceCircleEdge < 0;
+
+    if (inside) {
+        contact.a = poly;
+        contact.b = circle;
+        contact.depth = radius - distanceCircleEdge;
+        contact.normal = closestNextVertex.sub(&closestVertex).normal();
+        contact.start = circle.position.sub(&contact.normal.mulScalar(radius));
+        contact.end = contact.start.add(&contact.normal.mulScalar(contact.depth));
+        return true;
+    }
+
+    const radius2 = radius * radius;
+
+    //  The collision is either in area A, B or C:
+    //        |     |
+    //    A   |  C  | B
+    //  ------.-----.------
+    //        |     |
+    //        |     |
+    //        .-----.
+    //
+    blk: { // A
+        const closestToCircle = circle.position.sub(&closestVertex);
+        const closestEdge = closestNextVertex.sub(&closestVertex);
+        if (closestToCircle.dot(&closestEdge) >= 0) break :blk;
+
+        if (closestToCircle.len2() > radius2) {
+            return false;
+        }
+
+        contact.a = poly;
+        contact.b = circle;
+        contact.depth = radius - closestToCircle.len();
+        contact.normal = closestToCircle.normalize();
+        contact.start = circle.position.add(&contact.normal.mulScalar(-radius));
+        contact.end = contact.start.add(&contact.normal.mulScalar(contact.depth));
+        return true;
+    }
+
+    blk: { // B
+        const closestToCircle = circle.position.sub(&closestNextVertex);
+        const closestEdge = closestVertex.sub(&closestNextVertex);
+        if (closestToCircle.dot(&closestEdge) >= 0) break :blk;
+
+        if (closestToCircle.len2() > radius2) {
+            return false;
+        }
+
+        contact.a = poly;
+        contact.b = circle;
+        contact.depth = radius - closestToCircle.len();
+        contact.normal = closestToCircle.normalize();
+        contact.start = circle.position.add(&contact.normal.mulScalar(-radius));
+        contact.end = contact.start.add(&contact.normal.mulScalar(contact.depth));
+        return true;
+    }
+
+    // C
+    if (distanceCircleEdge > radius) return false;
+
+    contact.a = poly;
+    contact.b = circle;
+    contact.depth = radius - distanceCircleEdge;
+    contact.normal = closestNextVertex.sub(&closestVertex).normal();
+    contact.start = circle.position.sub(&contact.normal.mulScalar(radius));
+    contact.end = contact.start.add(&contact.normal.mulScalar(contact.depth));
+    return true;
 }
 
 inline fn isCollidingCircleCircle(a: *Body, b: *Body, ra: f32, rb: f32, contact: *Contact) bool {
