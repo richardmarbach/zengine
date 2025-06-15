@@ -17,7 +17,7 @@ const Vec2 = @import("physics/vec.zig").Vec2(f32);
 
 const Self = @This();
 
-const debug = true;
+var debug = false;
 
 running: bool = true,
 alloc: std.mem.Allocator,
@@ -37,18 +37,21 @@ pub fn init(alloc: std.mem.Allocator) !Self {
         @floatFromInt(graphics.height() - 10),
         0.0,
     ));
+    bodies.items[bodies.items.len - 1].restitution = 0.5;
     try bodies.append(Body.init(
         shapes.Shape{ .box = try shapes.Box.init(alloc, 10, graphics.height() - 30) },
         5,
         @floatFromInt(graphics.height() / 2),
         0.0,
     ));
+    bodies.items[bodies.items.len - 1].restitution = 0.5;
     try bodies.append(Body.init(
         shapes.Shape{ .box = try shapes.Box.init(alloc, 10, graphics.height() - 30) },
         @floatFromInt(graphics.width() - 5),
         @floatFromInt(graphics.height() / 2),
         0.0,
     ));
+    bodies.items[bodies.items.len - 1].restitution = 0.5;
 
     var bigBox = Body.init(
         shapes.Shape{ .box = try shapes.Box.init(alloc, 100, 100) },
@@ -81,6 +84,7 @@ pub fn input(self: *Self) !void {
             c.SDL_EVENT_KEY_DOWN => {
                 switch (event.key.key) {
                     c.SDLK_ESCAPE => self.running = false,
+                    c.SDLK_D => debug = !debug,
                     c.SDLK_UP => self.pushForce.setY(-50 * physicsConstants.PIXELS_PER_METER),
                     c.SDLK_DOWN => self.pushForce.setY(50 * physicsConstants.PIXELS_PER_METER),
                     c.SDLK_LEFT => self.pushForce.setX(-50 * physicsConstants.PIXELS_PER_METER),
