@@ -104,14 +104,14 @@ pub fn input(self: *Self) !void {
             },
             c.SDL_EVENT_MOUSE_BUTTON_DOWN => {
                 if (event.button.button == c.SDL_BUTTON_LEFT) {
-                    var box = Body.init(
-                        shapes.Shape{ .circle = .{ .radius = 20 } },
+                    var poly = Body.init(
+                        shapes.Shape{ .polygon = try shapes.Polygon.initEquilateral(self.alloc, 30, 5) },
                         event.button.x,
                         event.button.y,
                         1.0,
                     );
-                    box.restitution = 0.5;
-                    try self.bodies.append(box);
+                    poly.restitution = 0.1;
+                    try self.bodies.append(poly);
                 }
             },
             else => {},

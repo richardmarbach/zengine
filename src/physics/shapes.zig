@@ -26,16 +26,33 @@ pub const Polygon = struct {
     localVertices: Vertices,
     worldVertices: Vertices,
 
-    pub fn init(vertices: Vertices) Polygon {
+    // Takes ownership of vertices
+    pub fn init(vertices: Vertices) !Polygon {
         return Polygon{
             .localVertices = vertices,
-            .worldVertices = vertices,
+            .worldVertices = try vertices.clone(),
         };
     }
 
     pub fn deinit(self: *Polygon) void {
         self.localVertices.deinit();
         self.worldVertices.deinit();
+    }
+
+    pub fn initEquilateral(alloc: std.mem.Allocator, size: f32, sides: usize) !Polygon {
+        var vertices = try Vertices.initCapacity(alloc, sides);
+
+        const angle = std.math.tau / @as(f32, @floatFromInt(sides));
+
+        for (0..sides) |i| {
+            const alpha = angle * @as(f32, @floatFromInt(i));
+            vertices.appendAssumeCapacity(Vec2.init(
+                size * @cos(alpha),
+                size * @sin(alpha),
+            ));
+        }
+
+        return try Polygon.init(vertices);
     }
 };
 
@@ -94,7 +111,7 @@ pub const Shape = union(ShapeType) {
         return switch (self.*) {
             .circle => |c| return c.radius * c.radius * 0.5,
             .box => |b| return (1.0 / 12.0) * @as(f32, @floatFromInt(b.width * b.width + b.height * b.height)),
-            .polygon => 0,
+            .polygon => 5000, // TODO: do this properly
         };
     }
 
