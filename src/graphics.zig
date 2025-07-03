@@ -6,8 +6,11 @@ const c = @cImport({
     @cDefine("SDL_DISABLE_OLD_NAMES", {});
     @cInclude("SDL3/SDL.h");
     @cInclude("SDL3/SDL_revision.h");
+    @cInclude("SDL3_image/SDL_image.h");
     @cInclude("SDL3_gfxPrimitives.h");
 });
+
+pub const Texture = *c.SDL_Texture;
 
 const Vec2 = @import("physics/vec.zig").Vec2(f32);
 

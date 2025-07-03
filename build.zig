@@ -54,6 +54,40 @@ pub fn build(b: *std.Build) void {
     });
     exe_mod.addIncludePath(sdl_gfx_dep.path(""));
 
+    const sdl_image_dep = b.dependency("sdl_image", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
+    exe_mod.addIncludePath(sdl_image_dep.path("include"));
+    exe_mod.addCSourceFiles(.{
+        .root = sdl_image_dep.path("src"),
+        .files = &[_][]const u8{
+            "IMG.c",
+            "IMG_ImageIO.m",
+            "IMG_WIC.c",
+            "IMG_avif.c",
+            "IMG_bmp.c",
+            "IMG_gif.c",
+            "IMG_jpg.c",
+            "IMG_jxl.c",
+            "IMG_lbm.c",
+            "IMG_pcx.c",
+            "IMG_png.c",
+            "IMG_pnm.c",
+            "IMG_qoi.c",
+            "IMG_stb.c",
+            "IMG_svg.c",
+            "IMG_tga.c",
+            "IMG_tif.c",
+            "IMG_webp.c",
+            "IMG_xcf.c",
+            "IMG_xpm.c",
+            "IMG_xv.c",
+            "IMG_xxx.c",
+        },
+    });
+
     // This creates another `std.Build.Step.Compile`, but this one builds an executable
     // rather than a static library.
     const exe = b.addExecutable(.{

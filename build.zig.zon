@@ -44,6 +44,10 @@
             .url = "https://github.com/sabdul-khabir/SDL3_gfx/archive/refs/tags/v1.0.1.tar.gz",
             .hash = "N-V-__8AAFgBogBHc23Fei-aMVl4gJcgbPEGcxVZcZL3KuQ6",
         },
+        .sdl_image = .{
+            .url = "https://github.com/libsdl-org/SDL_image/archive/refs/tags/release-3.2.4.tar.gz",
+            .hash = "N-V-__8AAJB7IgJ65BPSqjqzt7j-5xKDklR0h8c11T60iemj",
+        },
     },
     .paths = .{
         "build.zig",
