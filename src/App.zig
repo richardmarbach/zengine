@@ -37,6 +37,7 @@ pub fn init(alloc: std.mem.Allocator) !Self {
         @floatFromInt(graphics.height() - 10),
         0.0,
     ));
+
     bodies.items[bodies.items.len - 1].restitution = 0.5;
     try bodies.append(Body.init(
         shapes.Shape{ .box = try shapes.Box.init(alloc, 10, graphics.height() - 30) },
@@ -60,6 +61,7 @@ pub fn init(alloc: std.mem.Allocator) !Self {
         0.0,
     );
     bigBox.rotation = 0.3;
+    bigBox.setTexture(try graphics.Texture.load("assets/crate.png"));
     try bodies.append(bigBox);
 
     return .{
@@ -175,7 +177,26 @@ pub fn render(self: *const Self) void {
     for (self.bodies.items) |body| {
         switch (body.shape) {
             .circle => |circle| graphics.drawCircle(body.position.x(), body.position.y(), circle.radius, body.rotation, 0xFFFFFFFF),
-            .box => |box| graphics.drawPolygon(body.position.x(), body.position.y(), box.worldVertices.items, 0xFFFFFFFF),
+            .box => |box| {
+                if (!debug and body.texture != null) {
+                    const texture = body.texture.?;
+                    graphics.drawTexture(
+                        body.position.x(),
+                        body.position.y(),
+                        @floatFromInt(box.width),
+                        @floatFromInt(box.height),
+                        body.rotation,
+                        &texture,
+                    );
+                } else {
+                    graphics.drawPolygon(
+                        body.position.x(),
+                        body.position.y(),
+                        box.worldVertices.items,
+                        0xFFFFFFFF,
+                    );
+                }
+            },
             .polygon => |poly| graphics.drawPolygon(body.position.x(), body.position.y(), poly.worldVertices.items, 0xFFFFFFFF),
         }
     }

@@ -10,8 +10,6 @@ const c = @cImport({
     @cInclude("SDL3_gfxPrimitives.h");
 });
 
-pub const Texture = *c.SDL_Texture;
-
 const Vec2 = @import("physics/vec.zig").Vec2(f32);
 
 const native_endian = builtin.cpu.arch.endian();
@@ -186,16 +184,24 @@ pub fn drawFillPolygon(alloc: std.mem.Allocator, x: f32, y: f32, vertices: []Vec
     _ = c.filledCircleColor(renderer, @intFromFloat(x), @intFromFloat(y), 1, 0xFF000000);
 }
 
-pub fn drawTexture(x: f32, y: f32, w: f32, h: f32, rotation: f32, texture: *c.SDL_Texture) void {
-    const destRect: c.SDL_Rect = .{
-        x - (w / 2),
-        y - (h / 2),
-        w,
-        h,
+pub fn drawTexture(x: f32, y: f32, w: f32, h: f32, rotation: f32, texture: *const Texture) void {
+    const destRect: c.SDL_FRect = .{
+        .x = x - (w / 2),
+        .y = y - (h / 2),
+        .w = w,
+        .h = h,
     };
 
     const rotationDeg = rotation * math.deg_per_rad;
-    _ = c.SDL_RenderTextureRotated(renderer, texture, null, &destRect, rotationDeg, null, c.SDL_FLIP_NONE);
+    _ = c.SDL_RenderTextureRotated(
+        renderer,
+        texture.sdlTexture,
+        null,
+        &destRect,
+        rotationDeg,
+        null,
+        c.SDL_FLIP_NONE,
+    );
 }
 
 pub fn drawText(x: f32, y: f32, text: [:0]const u8) void {
@@ -211,3 +217,26 @@ pub fn drawFmtText(x: f32, y: f32, comptime fmt: []const u8, args: anytype) void
     };
     drawText(x, y, output);
 }
+
+pub const Texture = struct {
+    sdlTexture: *c.SDL_Texture,
+
+    pub fn load(path: [:0]const u8) !Texture {
+        const surface = c.IMG_Load(path) orelse {
+            c.SDL_Log("Unable to load image: %s", c.SDL_GetError());
+            return error.TextureLoadFailed;
+        };
+        defer c.SDL_DestroySurface(surface);
+
+        const texture = c.SDL_CreateTextureFromSurface(renderer, surface) orelse {
+            c.SDL_Log("Unable to create texture from surface: %s", c.SDL_GetError());
+            return error.TextureCreationFailed;
+        };
+
+        return .{ .sdlTexture = texture };
+    }
+
+    pub fn deinit(self: *Texture) void {
+        c.SDL_DestroyTexture(self.sdlTexture);
+    }
+};

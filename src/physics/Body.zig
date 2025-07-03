@@ -44,7 +44,14 @@ pub fn init(shape: Shape, x: f32, y: f32, mass: f32) Self {
 }
 
 pub fn deinit(self: *Self) void {
+    if (self.texture) |*texture| {
+        texture.deinit();
+    }
     self.shape.deinit();
+}
+
+pub inline fn setTexture(self: *Self, texture: ?graphics.Texture) void {
+    self.texture = texture;
 }
 
 pub inline fn isStatic(self: *const Self) bool {
