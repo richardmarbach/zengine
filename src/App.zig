@@ -115,6 +115,17 @@ pub fn input(self: *Self) !void {
                     poly.restitution = 0.1;
                     try self.bodies.append(poly);
                 }
+                if (event.button.button == c.SDL_BUTTON_RIGHT) {
+                    var ball = Body.init(
+                        shapes.Shape{ .circle = shapes.Circle{ .radius = 30 } },
+                        event.button.x,
+                        event.button.y,
+                        1.0,
+                    );
+                    ball.setTexture(graphics.Texture.load("assets/basketball.png") catch null);
+                    ball.restitution = 0.5;
+                    try self.bodies.append(ball);
+                }
             },
             else => {},
         }
@@ -176,7 +187,27 @@ pub fn render(self: *const Self) void {
 
     for (self.bodies.items) |body| {
         switch (body.shape) {
-            .circle => |circle| graphics.drawCircle(body.position.x(), body.position.y(), circle.radius, body.rotation, 0xFFFFFFFF),
+            .circle => |circle| {
+                if (!debug and body.texture != null) {
+                    const texture = body.texture.?;
+                    graphics.drawTexture(
+                        body.position.x(),
+                        body.position.y(),
+                        circle.radius * 2,
+                        circle.radius * 2,
+                        body.rotation,
+                        &texture,
+                    );
+                } else {
+                    graphics.drawCircle(
+                        body.position.x(),
+                        body.position.y(),
+                        circle.radius,
+                        body.rotation,
+                        0xFFFFFFFF,
+                    );
+                }
+            },
             .box => |box| {
                 if (!debug and body.texture != null) {
                     const texture = body.texture.?;
@@ -197,7 +228,31 @@ pub fn render(self: *const Self) void {
                     );
                 }
             },
-            .polygon => |poly| graphics.drawPolygon(body.position.x(), body.position.y(), poly.worldVertices.items, 0xFFFFFFFF),
+            .polygon => |poly| {
+                if (!debug) {
+                    graphics.drawFillPolygon(
+                        self.alloc,
+                        body.position.x(),
+                        body.position.y(),
+                        poly.worldVertices.items,
+                        0xFFFFFFFF,
+                    ) catch {
+                        graphics.drawPolygon(
+                            body.position.x(),
+                            body.position.y(),
+                            poly.worldVertices.items,
+                            0xFFFFFFFF,
+                        );
+                    };
+                } else {
+                    graphics.drawPolygon(
+                        body.position.x(),
+                        body.position.y(),
+                        poly.worldVertices.items,
+                        0xFFFFFFFF,
+                    );
+                }
+            },
         }
     }
 

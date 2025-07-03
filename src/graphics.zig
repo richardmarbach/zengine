@@ -174,13 +174,15 @@ pub fn drawPolygon(x: f32, y: f32, vertices: []Vec2, color: u32) void {
 pub fn drawFillPolygon(alloc: std.mem.Allocator, x: f32, y: f32, vertices: []Vec2, color: u32) !void {
     const vx = try alloc.alloc(i16, vertices.len);
     const vy = try alloc.alloc(i16, vertices.len);
+    defer alloc.free(vx);
+    defer alloc.free(vy);
 
     for (vertices, 0..) |vertex, i| {
         vx[i] = @intFromFloat(vertex.x());
         vy[i] = @intFromFloat(vertex.y());
     }
 
-    _ = c.filledPolygonColor(renderer, vx.ptr, vy.ptr, vertices.len, color);
+    _ = c.filledPolygonColor(renderer, vx.ptr, vy.ptr, @intCast(vertices.len), color);
     _ = c.filledCircleColor(renderer, @intFromFloat(x), @intFromFloat(y), 1, 0xFF000000);
 }
 
