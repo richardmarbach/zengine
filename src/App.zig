@@ -3,9 +3,8 @@ const std = @import("std");
 const graphics = @import("graphics.zig");
 const Body = @import("physics/Body.zig");
 const physicsConstants = @import("physics/constants.zig");
-const force = @import("physics/force.zig");
 const shapes = @import("physics/shapes.zig");
-const collisions = @import("physics/collision.zig");
+const World = @import("physics/World.zig");
 
 const c = @cImport({
     @cDefine("SDL_DISABLE_OLD_NAMES", {});
@@ -21,38 +20,41 @@ var debug = false;
 
 running: bool = true,
 alloc: std.mem.Allocator,
-bodies: std.ArrayList(Body),
-pushForce: Vec2 = Vec2.init(0, 0),
+world: World,
 
 timePreviousFrame: u64 = 0,
 
 pub fn init(alloc: std.mem.Allocator) !Self {
     try graphics.openWindow();
 
-    var bodies = std.ArrayList(Body).init(alloc);
+    var world = World.init(alloc, 9.8);
 
-    try bodies.append(Body.init(
+    var floor = Body.init(
         shapes.Shape{ .box = try shapes.Box.init(alloc, graphics.width() - 20, 10) },
         @floatFromInt(graphics.width() / 2),
         @floatFromInt(graphics.height() - 10),
         0.0,
-    ));
+    );
+    floor.restitution = 0.5;
+    try world.addBody(floor);
 
-    bodies.items[bodies.items.len - 1].restitution = 0.5;
-    try bodies.append(Body.init(
+    var leftWall = Body.init(
         shapes.Shape{ .box = try shapes.Box.init(alloc, 10, graphics.height() - 30) },
         5,
         @floatFromInt(graphics.height() / 2),
         0.0,
-    ));
-    bodies.items[bodies.items.len - 1].restitution = 0.5;
-    try bodies.append(Body.init(
+    );
+    leftWall.restitution = 0.5;
+    try world.addBody(leftWall);
+
+    var rightWall = Body.init(
         shapes.Shape{ .box = try shapes.Box.init(alloc, 10, graphics.height() - 30) },
         @floatFromInt(graphics.width() - 5),
         @floatFromInt(graphics.height() / 2),
         0.0,
-    ));
-    bodies.items[bodies.items.len - 1].restitution = 0.5;
+    );
+    rightWall.restitution = 0.5;
+    try world.addBody(rightWall);
 
     var bigBox = Body.init(
         shapes.Shape{ .box = try shapes.Box.init(alloc, 100, 100) },
@@ -62,19 +64,16 @@ pub fn init(alloc: std.mem.Allocator) !Self {
     );
     bigBox.rotation = 0.3;
     bigBox.setTexture(try graphics.Texture.load("assets/crate.png"));
-    try bodies.append(bigBox);
+    try world.addBody(bigBox);
 
     return .{
         .alloc = alloc,
-        .bodies = bodies,
+        .world = world,
     };
 }
 
 pub fn deinit(self: *Self) void {
-    for (self.bodies.items) |*body| {
-        body.deinit();
-    }
-    self.bodies.deinit();
+    self.world.deinit();
     graphics.closeWindow();
 }
 
@@ -87,20 +86,12 @@ pub fn input(self: *Self) !void {
                 switch (event.key.key) {
                     c.SDLK_ESCAPE => self.running = false,
                     c.SDLK_D => debug = !debug,
-                    c.SDLK_UP => self.pushForce.setY(-50 * physicsConstants.PIXELS_PER_METER),
-                    c.SDLK_DOWN => self.pushForce.setY(50 * physicsConstants.PIXELS_PER_METER),
-                    c.SDLK_LEFT => self.pushForce.setX(-50 * physicsConstants.PIXELS_PER_METER),
-                    c.SDLK_RIGHT => self.pushForce.setX(50 * physicsConstants.PIXELS_PER_METER),
                     else => {},
                 }
             },
             c.SDL_EVENT_KEY_UP => {
                 switch (event.key.key) {
                     c.SDLK_ESCAPE => self.running = false,
-                    c.SDLK_UP => self.pushForce.setY(0),
-                    c.SDLK_DOWN => self.pushForce.setY(0),
-                    c.SDLK_LEFT => self.pushForce.setX(0),
-                    c.SDLK_RIGHT => self.pushForce.setX(0),
                     else => {},
                 }
             },
@@ -113,7 +104,7 @@ pub fn input(self: *Self) !void {
                         1.0,
                     );
                     poly.restitution = 0.1;
-                    try self.bodies.append(poly);
+                    try self.world.addBody(poly);
                 }
                 if (event.button.button == c.SDL_BUTTON_RIGHT) {
                     var ball = Body.init(
@@ -124,7 +115,7 @@ pub fn input(self: *Self) !void {
                     );
                     ball.setTexture(graphics.Texture.load("assets/basketball.png") catch null);
                     ball.restitution = 0.5;
-                    try self.bodies.append(ball);
+                    try self.world.addBody(ball);
                 }
             },
             else => {},
@@ -151,33 +142,7 @@ pub fn update(self: *Self) void {
     };
 
     self.timePreviousFrame = c.SDL_GetTicks();
-
-    for (self.bodies.items) |*body| {
-        // Push
-        body.addForce(&self.pushForce);
-        //
-        // body.addForce(&force.friction(body, 30));
-        body.addForce(&force.weight(body, 9.8 * physicsConstants.PIXELS_PER_METER));
-
-        // body.addTorque(200);
-        body.update(deltaTime);
-    }
-
-    for (self.bodies.items, 0..) |*a, i| {
-        for (self.bodies.items[i + 1 ..]) |*b| {
-            var contact: collisions.Contact = undefined;
-            if (collisions.isColliding(a, b, &contact)) {
-                contact.resolveCollision();
-
-                if (debug) {
-                    graphics.drawFillCircle(contact.start.x(), contact.start.y(), 3, 0xFFFF00FF);
-                    graphics.drawFillCircle(contact.end.x(), contact.end.y(), 3, 0xFFFF00FF);
-                    const normalLineEnd = contact.start.add(&contact.normal.mulScalar(15));
-                    graphics.drawLine(contact.start.x(), contact.start.y(), normalLineEnd.x(), normalLineEnd.y(), 0xFFFF00FF);
-                }
-            }
-        }
-    }
+    self.world.update(deltaTime);
 }
 
 pub fn render(self: *const Self) void {
@@ -185,7 +150,7 @@ pub fn render(self: *const Self) void {
         graphics.clearScreen(0xFF0F0721);
     }
 
-    for (self.bodies.items) |body| {
+    for (self.world.bodies.items) |body| {
         switch (body.shape) {
             .circle => |circle| {
                 if (!debug and body.texture != null) {
