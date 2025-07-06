@@ -73,4 +73,3 @@ pub fn checkCollisions(self: *World) void {
         }
     }
 }
-

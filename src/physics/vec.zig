@@ -167,6 +167,56 @@ pub fn Vec3(comptime Scalar: type) type {
     };
 }
 
+pub fn Vec(comptime Scalar: type, comptime N: comptime_int) type {
+    return struct {
+        v: Vector,
+
+        pub const n = N;
+
+        pub const T = Scalar;
+
+        pub const Vector = @Vector(n, Scalar);
+
+        const VecN = @This();
+
+        const Shared = VecShared(Scalar, VecN);
+
+        pub inline fn init(vs: [N]Scalar) VecN {
+            return .{ .v = vs };
+        }
+
+        pub inline fn get(v: *const VecN, i: usize) Scalar {
+            return v.v[i];
+        }
+
+        pub const add = Shared.add;
+        pub const sub = Shared.sub;
+        pub const mul = Shared.mul;
+        pub const div = Shared.div;
+        pub const addScalar = Shared.addScalar;
+        pub const subScalar = Shared.subScalar;
+        pub const mulScalar = Shared.mulScalar;
+        pub const divScalar = Shared.divScalar;
+        pub const less = Shared.less;
+        pub const lessEq = Shared.lessEq;
+        pub const greaterEq = Shared.greaterEq;
+        pub const greater = Shared.greater;
+        pub const len2 = Shared.len2;
+        pub const len = Shared.len;
+        pub const normalize = Shared.normalize;
+        pub const dir = Shared.dir;
+        pub const dist2 = Shared.dist2;
+        pub const dist = Shared.dist;
+        pub const dot = Shared.dot;
+        pub const splat = Shared.splat;
+        pub const eqlApprox = Shared.eqlApprox;
+        pub const eql = Shared.eql;
+        pub const negate = Shared.negate;
+        pub const max = Shared.max;
+        pub const format = Shared.format;
+    };
+}
+
 pub fn VecShared(comptime Scalar: type, comptime VecN: type) type {
     return struct {
         pub inline fn add(a: *const VecN, b: *const VecN) VecN {
@@ -218,11 +268,7 @@ pub fn VecShared(comptime Scalar: type, comptime VecN: type) type {
         }
 
         pub inline fn len2(a: *const VecN) Scalar {
-            return switch (VecN.n) {
-                inline 2 => a.x() * a.x() + a.y() * a.y(),
-                inline 3 => a.x() * a.x() + a.y() * a.y() + a.z() * a.z(),
-                else => @compileError("Expected Vec2 or Vec3, found '" ++ @typeName(VecN) ++ "'"),
-            };
+            return @reduce(.Add, a.v * a.v);
         }
 
         pub inline fn len(a: *const VecN) Scalar {
@@ -272,26 +318,16 @@ pub fn VecShared(comptime Scalar: type, comptime VecN: type) type {
         }
 
         pub inline fn negate(a: *const VecN) VecN {
-            return switch (VecN.n) {
-                inline 2 => .{ .v = VecN.init(-1, -1).v * a.v },
-                inline 3 => .{ .v = VecN.init(-1, -1, -1).v * a.v },
-                else => @compileError("Expected Vec2 or Vec3, found '" ++ @typeName(VecN) ++ "'"),
-            };
+            return .{ .v = @as(VecN.Vector, @splat(-1)) * a.v };
         }
 
         pub inline fn max(a: *const VecN, b: *const VecN) VecN {
-            return switch (VecN.n) {
-                inline 2 => VecN.init(
-                    @min(a.x(), b.x()),
-                    @min(a.y(), b.y()),
-                ),
-                inline 3 => VecN.init(
-                    @min(a.x(), b.x()),
-                    @min(a.y(), b.y()),
-                    @min(a.z(), b.z()),
-                ),
-                else => @compileError("Expected Vec2 or Vec3, found '" ++ @typeName(VecN) ++ "'"),
-            };
+            var result: VecN = undefined;
+            comptime var i: usize = 0;
+            inline while (i < VecN.n) : (i += 1) {
+                result.v[i] = @max(a.v[i], b.v[i]);
+            }
+            return result;
         }
 
         pub inline fn format(
