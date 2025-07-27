@@ -182,7 +182,11 @@ pub fn Vec(comptime Scalar: type, comptime N: comptime_int) type {
         const Shared = VecShared(Scalar, VecN);
 
         pub inline fn init(vs: [N]Scalar) VecN {
-            return .{ .v = vs };
+            const v: [N]Scalar = undefined;
+            inline for (0..N) |i| {
+                v[i] = vs[i];
+            }
+            return .{ .v = v };
         }
 
         pub inline fn get(v: *const VecN, i: usize) Scalar {
