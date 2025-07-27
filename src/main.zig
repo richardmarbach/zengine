@@ -8,7 +8,8 @@ pub fn main() !void {
         .{ 4.0, 5.0, 6.0 },
         .{ 7.0, 8.0, 9.0 },
     });
-    std.debug.print("Matrix r: {any}\n", .{r.mul(&r)});
+    std.debug.print("Matrix r: {any}\n", .{r});
+    std.debug.print("Transposed r: {any}\n", .{r.transpose()});
 
     // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     // const allocator = gpa.allocator();

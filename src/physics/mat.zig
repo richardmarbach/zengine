@@ -43,9 +43,18 @@ pub fn MatMxN(comptime Scalar: type, M: comptime_int, N: comptime_int) type {
             return .{ .v = v };
         }
 
-        // pub inline fn transpose(m: *const Matrix) Matrix {
-        //
-        // }
+        pub inline fn transpose(m: *const Matrix) Matrix {
+            const Transposed = MatMxN(Matrix.T, Matrix.cols, Matrix.rows);
+            var vs: [Transposed.cols][Transposed.rows]Matrix.T = undefined;
+
+            inline for (0..Matrix.rows) |r| {
+                inline for (0..Matrix.cols) |c| {
+                    vs[c][r] = m.v[r].v[c];
+                }
+            }
+
+            return Transposed.init(vs);
+        }
 
         const Shared = MatShared(RowVec, ColVec, Matrix);
 
