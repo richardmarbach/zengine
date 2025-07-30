@@ -57,50 +57,61 @@ pub fn MatMxN(comptime Scalar: type, M: comptime_int, N: comptime_int) type {
             return .{ .v = vs };
         }
 
-        const Shared = MatShared(RowVec, ColVec, Matrix);
-
-        pub const mul = Shared.mul;
-        pub const mulVec = Shared.mulVec;
-        pub const eql = Shared.eql;
-        pub const eqlApprox = Shared.eqlApprox;
-        pub const format = Shared.format;
-    };
-}
-
-pub fn MatShared(comptime RowVec: type, comptime ColVec: type, comptime Matrix: type) type {
-    return struct {
         pub inline fn mul(a: *const Matrix, b: *const Matrix) Matrix {
             @setEvalBranchQuota(10000);
             var result: Matrix = undefined;
-            inline for (0..Matrix.rows) |row| {
+            inline for (0..Matrix.rows) |r| {
                 inline for (0..Matrix.cols) |col| {
                     var sum: RowVec.T = 0.0;
                     inline for (0..RowVec.n) |i| {
                         // Note: we directly access rows/columns below as it is much faster **in
                         // debug builds**, instead of using these helpers:
                         //
-                        // sum += a.row(row).mul(&b.col(col)).v[i];
-                        sum += a.v[i].v[row] * b.v[col].v[i];
+                        // sum += a.row(r).mul(&b.col(col)).v[i];
+                        sum += a.v[i].v[r] * b.v[col].v[i];
                     }
-                    result.v[col].v[row] = sum;
+                    result.v[col].v[r] = sum;
                 }
             }
             return result;
         }
 
+        pub inline fn mulM(a: *const Matrix, b: anytype) t: {
+            const MatrixB = @typeInfo(@TypeOf(b)).pointer.child;
+            break :t MatMxN(Matrix.T, Matrix.rows, MatrixB.cols);
+        } {
+            const MatrixB = @typeInfo(@TypeOf(b)).pointer.child;
+            std.debug.assert(MatrixB.cols == Matrix.rows);
+            const Result = MatMxN(Matrix.T, Matrix.rows, MatrixB.cols);
+
+            @setEvalBranchQuota(10000);
+            var result: Result = undefined;
+            inline for (0..Matrix.rows) |r| {
+                inline for (0..MatrixB.cols) |c| {
+                    var sum: RowVec.T = 0.0;
+                    inline for (0..RowVec.n) |i| {
+                        sum += a.v[r].v[i] * b.v[i].v[c];
+                    }
+                    result.v[c].v[r] = sum;
+                }
+            }
+
+            return result;
+        }
+
         pub inline fn mulVec(matrix: *const Matrix, vector: *const ColVec) ColVec {
             var result = [_]ColVec.T{0} ** ColVec.n;
-            inline for (0..Matrix.rows) |row| {
+            inline for (0..Matrix.rows) |r| {
                 inline for (0..ColVec.n) |i| {
-                    result[i] += matrix.v[row].v[i] * vector.v[row];
+                    result[i] += matrix.v[r].v[i] * vector.v[r];
                 }
             }
             return ColVec{ .v = result };
         }
 
         pub inline fn eqlApprox(a: *const Matrix, b: *const Matrix, tolerance: ColVec.T) bool {
-            inline for (0..Matrix.rows) |row| {
-                if (!ColVec.eqlApprox(&a.v[row], &b.v[row], tolerance)) {
+            inline for (0..Matrix.rows) |r| {
+                if (!ColVec.eqlApprox(&a.v[r], &b.v[r], tolerance)) {
                     return false;
                 }
             }
@@ -108,8 +119,8 @@ pub fn MatShared(comptime RowVec: type, comptime ColVec: type, comptime Matrix: 
         }
 
         pub inline fn eql(a: *const Matrix, b: *const Matrix) bool {
-            inline for (0..Matrix.rows) |row| {
-                if (!ColVec.eql(&a.v[row], &b.v[row])) {
+            inline for (0..Matrix.rows) |r| {
+                if (!ColVec.eql(&a.v[r], &b.v[r])) {
                     return false;
                 }
             }
@@ -122,7 +133,6 @@ pub fn MatShared(comptime RowVec: type, comptime ColVec: type, comptime Matrix: 
             options: std.fmt.FormatOptions,
             writer: anytype,
         ) @TypeOf(writer).Error!void {
-            const rows = @TypeOf(self).rows;
             try writer.print("{{", .{});
             inline for (0..rows) |r| {
                 try std.fmt.formatType(self.row(r), fmt, options, writer, 1);

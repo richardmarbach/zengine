@@ -8,8 +8,15 @@ pub fn main() !void {
         .{ 4.0, 5.0 },
         .{ 7.0, 8.0 },
     });
+    const o = mat.MatMxN(f32, 2, 3).init(.{
+        .{ 1.0, 2.0, 3.0 },
+        .{ 4.0, 5.0, 6.0 },
+    });
+
     std.debug.print("Matrix r: {any}\n", .{r});
-    std.debug.print("Transposed r: {any}\n", .{r.transpose()});
+    // std.debug.print("Transposed r: {any}\n", .{r.transpose()});
+    std.debug.print("Other o: {any}\n", .{o});
+    std.debug.print("Generic Multiplication r: {any}\n", .{r.mulM(&o)});
 
     // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     // const allocator = gpa.allocator();
