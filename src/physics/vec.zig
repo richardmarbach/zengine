@@ -334,13 +334,8 @@ pub fn VecShared(comptime Scalar: type, comptime VecN: type) type {
             return result;
         }
 
-        pub inline fn format(
-            self: VecN,
-            comptime fmt: []const u8,
-            options: std.fmt.FormatOptions,
-            writer: anytype,
-        ) @TypeOf(writer).Error!void {
-            try std.fmt.formatType(self.v, fmt, options, writer, 1);
+        pub inline fn format(self: VecN, writer: *std.io.Writer) std.io.Writer.Error!void {
+            try writer.print("{}", .{self.v});
         }
     };
 }

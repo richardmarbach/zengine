@@ -127,17 +127,26 @@ pub fn MatMxN(comptime Scalar: type, M: comptime_int, N: comptime_int) type {
             return true;
         }
 
-        pub inline fn format(
-            self: Matrix,
-            comptime fmt: []const u8,
-            options: std.fmt.FormatOptions,
-            writer: anytype,
-        ) @TypeOf(writer).Error!void {
+        pub inline fn format(self: Matrix, writer: *std.io.Writer) std.io.Writer.Error!void {
             try writer.print("{{", .{});
             inline for (0..rows) |r| {
-                try std.fmt.formatType(self.row(r), fmt, options, writer, 1);
+                try writer.print("{f}", .{self.row(r)});
                 if (r < rows - 1) {
                     try writer.print(", ", .{});
+                }
+            }
+            try writer.print("}}", .{});
+        }
+
+        pub fn formatMultiLine(self: Matrix, writer: *std.io.Writer) std.io.Writer.Error!void {
+            try writer.print("\n{{", .{});
+            inline for (0..rows) |r| {
+                if (r > 0) {
+                    try writer.print(" ", .{});
+                }
+                try writer.print("{f}", .{self.row(r)});
+                if (r < rows - 1) {
+                    try writer.print(",\n", .{});
                 }
             }
             try writer.print("}}", .{});

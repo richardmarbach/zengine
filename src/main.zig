@@ -13,10 +13,10 @@ pub fn main() !void {
         .{ 4.0, 5.0, 6.0 },
     });
 
-    std.debug.print("Matrix r: {any}\n", .{r});
-    // std.debug.print("Transposed r: {any}\n", .{r.transpose()});
-    std.debug.print("Other o: {any}\n", .{o});
-    std.debug.print("Generic Multiplication r: {any}\n", .{r.mulM(&o)});
+    std.debug.print("Matrix r: {f}\n", .{std.fmt.alt(r, .formatMultiLine)});
+    std.debug.print("Transposed r: {f}\n", .{r.transpose()});
+    std.debug.print("Other o: {f}\n", .{o});
+    std.debug.print("Generic Multiplication r: {f}\n", .{r.mulM(&o)});
 
     // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     // const allocator = gpa.allocator();
