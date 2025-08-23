@@ -34,9 +34,9 @@ pub const Polygon = struct {
         };
     }
 
-    pub fn deinit(self: *Polygon) void {
-        self.localVertices.deinit();
-        self.worldVertices.deinit();
+    pub fn deinit(self: *Polygon, alloc: std.mem.Allocator) void {
+        self.localVertices.deinit(alloc);
+        self.worldVertices.deinit(alloc);
     }
 
     pub fn initEquilateral(alloc: std.mem.Allocator, size: f32, sides: usize) !Polygon {
@@ -67,12 +67,12 @@ pub const Box = struct {
         const h: f32 = @floatFromInt(height);
 
         var localVertices = try Vertices.initCapacity(alloc, 4);
-        try localVertices.append(Vec2.init(-w / 2, -h / 2));
-        try localVertices.append(Vec2.init(w / 2, -h / 2));
-        try localVertices.append(Vec2.init(w / 2, h / 2));
-        try localVertices.append(Vec2.init(-w / 2, h / 2));
+        localVertices.appendAssumeCapacity(Vec2.init(-w / 2, -h / 2));
+        localVertices.appendAssumeCapacity(Vec2.init(w / 2, -h / 2));
+        localVertices.appendAssumeCapacity(Vec2.init(w / 2, h / 2));
+        localVertices.appendAssumeCapacity(Vec2.init(-w / 2, h / 2));
 
-        const worldVertices = try localVertices.clone();
+        const worldVertices = try localVertices.clone(alloc);
 
         return Box{
             .localVertices = localVertices,
@@ -82,9 +82,9 @@ pub const Box = struct {
         };
     }
 
-    pub fn deinit(self: *Box) void {
-        self.localVertices.deinit();
-        self.worldVertices.deinit();
+    pub fn deinit(self: *Box, alloc: std.mem.Allocator) void {
+        self.localVertices.deinit(alloc);
+        self.worldVertices.deinit(alloc);
     }
 };
 
@@ -99,11 +99,11 @@ pub const Shape = union(ShapeType) {
     polygon: Polygon,
     box: Box,
 
-    pub fn deinit(self: *Shape) void {
+    pub fn deinit(self: *Shape, alloc: std.mem.Allocator) void {
         switch (self.*) {
             .circle => {},
-            .polygon => self.polygon.deinit(),
-            .box => self.box.deinit(),
+            .polygon => self.polygon.deinit(alloc),
+            .box => self.box.deinit(alloc),
         }
     }
 

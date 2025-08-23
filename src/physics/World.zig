@@ -13,35 +13,35 @@ bodies: std.ArrayList(Body),
 forces: std.ArrayList(Vec2),
 torques: std.ArrayList(f32),
 
-pub fn init(alloc: std.mem.Allocator, gravity: f32) World {
+pub fn init(gravity: f32) World {
     return .{
         .gravity = gravity,
-        .bodies = std.ArrayList(Body).init(alloc),
-        .forces = std.ArrayList(Vec2).init(alloc),
-        .torques = std.ArrayList(f32).init(alloc),
+        .bodies = std.ArrayList(Body){},
+        .forces = std.ArrayList(Vec2){},
+        .torques = std.ArrayList(f32){},
     };
 }
 
-pub fn deinit(self: *World) void {
+pub fn deinit(self: *World, alloc: std.mem.Allocator) void {
     for (self.bodies.items) |*body| {
-        body.deinit();
+        body.deinit(alloc);
     }
 
-    self.bodies.deinit();
-    self.forces.deinit();
-    self.torques.deinit();
+    self.bodies.deinit(alloc);
+    self.forces.deinit(alloc);
+    self.torques.deinit(alloc);
 }
 
-pub fn addBody(self: *World, body: Body) !void {
-    try self.bodies.append(body);
+pub fn addBody(self: *World, alloc: std.mem.Allocator, body: Body) !void {
+    try self.bodies.append(alloc, body);
 }
 
-pub fn addForce(self: *World, force: Vec2) !void {
-    try self.forces.append(force);
+pub fn addForce(self: *World, alloc: std.mem.Allocator, force: Vec2) !void {
+    try self.forces.append(alloc, force);
 }
 
-pub fn addTorque(self: *World, torque: f32) !void {
-    try self.torques.append(torque);
+pub fn addTorque(self: *World, alloc: std.mem.Allocator, torque: f32) !void {
+    try self.torques.append(alloc, torque);
 }
 
 pub fn update(self: *World, deltaTime: f32) void {

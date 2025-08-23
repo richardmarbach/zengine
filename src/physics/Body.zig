@@ -43,11 +43,11 @@ pub fn init(shape: Shape, x: f32, y: f32, mass: f32) Self {
     };
 }
 
-pub fn deinit(self: *Self) void {
+pub fn deinit(self: *Self, alloc: std.mem.Allocator) void {
     if (self.texture) |*texture| {
         texture.deinit();
     }
-    self.shape.deinit();
+    self.shape.deinit(alloc);
 }
 
 pub inline fn setTexture(self: *Self, texture: ?graphics.Texture) void {

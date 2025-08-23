@@ -27,7 +27,7 @@ timePreviousFrame: u64 = 0,
 pub fn init(alloc: std.mem.Allocator) !Self {
     try graphics.openWindow();
 
-    var world = World.init(alloc, 9.8);
+    var world = World.init(9.8);
 
     var floor = Body.init(
         shapes.Shape{ .box = try shapes.Box.init(alloc, graphics.width() - 20, 10) },
@@ -36,7 +36,7 @@ pub fn init(alloc: std.mem.Allocator) !Self {
         0.0,
     );
     floor.restitution = 0.5;
-    try world.addBody(floor);
+    try world.addBody(alloc, floor);
 
     var leftWall = Body.init(
         shapes.Shape{ .box = try shapes.Box.init(alloc, 10, graphics.height() - 30) },
@@ -45,7 +45,7 @@ pub fn init(alloc: std.mem.Allocator) !Self {
         0.0,
     );
     leftWall.restitution = 0.5;
-    try world.addBody(leftWall);
+    try world.addBody(alloc, leftWall);
 
     var rightWall = Body.init(
         shapes.Shape{ .box = try shapes.Box.init(alloc, 10, graphics.height() - 30) },
@@ -54,7 +54,7 @@ pub fn init(alloc: std.mem.Allocator) !Self {
         0.0,
     );
     rightWall.restitution = 0.5;
-    try world.addBody(rightWall);
+    try world.addBody(alloc, rightWall);
 
     var bigBox = Body.init(
         shapes.Shape{ .box = try shapes.Box.init(alloc, 100, 100) },
@@ -64,7 +64,7 @@ pub fn init(alloc: std.mem.Allocator) !Self {
     );
     bigBox.rotation = 0.3;
     bigBox.setTexture(try graphics.Texture.load("assets/crate.png"));
-    try world.addBody(bigBox);
+    try world.addBody(alloc, bigBox);
 
     return .{
         .alloc = alloc,
@@ -73,7 +73,7 @@ pub fn init(alloc: std.mem.Allocator) !Self {
 }
 
 pub fn deinit(self: *Self) void {
-    self.world.deinit();
+    self.world.deinit(self.alloc);
     graphics.closeWindow();
 }
 
@@ -104,7 +104,7 @@ pub fn input(self: *Self) !void {
                         1.0,
                     );
                     box.restitution = 0.1;
-                    try self.world.addBody(box);
+                    try self.world.addBody(self.alloc, box);
                 }
                 if (event.button.button == c.SDL_BUTTON_RIGHT) {
                     var ball = Body.init(
@@ -115,7 +115,7 @@ pub fn input(self: *Self) !void {
                     );
                     ball.setTexture(graphics.Texture.load("assets/basketball.png") catch null);
                     ball.restitution = 0.5;
-                    try self.world.addBody(ball);
+                    try self.world.addBody(self.alloc, ball);
                 }
             },
             else => {},
