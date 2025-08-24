@@ -5,6 +5,7 @@ const Body = @import("physics/Body.zig");
 const physicsConstants = @import("physics/constants.zig");
 const shapes = @import("physics/shapes.zig");
 const World = @import("physics/World.zig");
+const Constraint = @import("physics/constraint.zig");
 
 const c = @cImport({
     @cDefine("SDL_DISABLE_OLD_NAMES", {});
@@ -29,42 +30,65 @@ pub fn init(alloc: std.mem.Allocator) !Self {
 
     var world = World.init(9.8);
 
-    var floor = Body.init(
-        shapes.Shape{ .box = try shapes.Box.init(alloc, graphics.width() - 20, 10) },
+    // var floor = Body.init(
+    //     shapes.Shape{ .box = try shapes.Box.init(alloc, graphics.width() - 20, 10) },
+    //     @floatFromInt(graphics.width() / 2),
+    //     @floatFromInt(graphics.height() - 10),
+    //     0.0,
+    // );
+    // floor.restitution = 0.5;
+    // try world.addBody(alloc, floor);
+    //
+    // var leftWall = Body.init(
+    //     shapes.Shape{ .box = try shapes.Box.init(alloc, 10, graphics.height() - 30) },
+    //     5,
+    //     @floatFromInt(graphics.height() / 2),
+    //     0.0,
+    // );
+    // leftWall.restitution = 0.5;
+    // try world.addBody(alloc, leftWall);
+    //
+    // var rightWall = Body.init(
+    //     shapes.Shape{ .box = try shapes.Box.init(alloc, 10, graphics.height() - 30) },
+    //     @floatFromInt(graphics.width() - 5),
+    //     @floatFromInt(graphics.height() / 2),
+    //     0.0,
+    // );
+    // rightWall.restitution = 0.5;
+    // try world.addBody(alloc, rightWall);
+
+    // var bigBox = Body.init(
+    //     shapes.Shape{ .box = try shapes.Box.init(alloc, 100, 100) },
+    //     @floatFromInt(graphics.width() / 2),
+    //     @floatFromInt(graphics.height() / 2),
+    //     0.0,
+    // );
+    // bigBox.rotation = 0.3;
+    // bigBox.setTexture(try graphics.Texture.load("assets/crate.png"));
+    // try world.addBody(alloc, bigBox);
+
+    const a = Body.init(
+        shapes.Shape{ .circle = .{ .radius = 30 } },
         @floatFromInt(graphics.width() / 2),
-        @floatFromInt(graphics.height() - 10),
-        0.0,
-    );
-    floor.restitution = 0.5;
-    try world.addBody(alloc, floor);
-
-    var leftWall = Body.init(
-        shapes.Shape{ .box = try shapes.Box.init(alloc, 10, graphics.height() - 30) },
-        5,
         @floatFromInt(graphics.height() / 2),
-        0.0,
+        0,
     );
-    leftWall.restitution = 0.5;
-    try world.addBody(alloc, leftWall);
+    try world.addBody(alloc, a);
 
-    var rightWall = Body.init(
-        shapes.Shape{ .box = try shapes.Box.init(alloc, 10, graphics.height() - 30) },
-        @floatFromInt(graphics.width() - 5),
-        @floatFromInt(graphics.height() / 2),
-        0.0,
+    const b = Body.init(
+        shapes.Shape{ .circle = .{ .radius = 20 } },
+        a.position.x() - 100,
+        a.position.y(),
+        1,
     );
-    rightWall.restitution = 0.5;
-    try world.addBody(alloc, rightWall);
+    try world.addBody(alloc, b);
 
-    var bigBox = Body.init(
-        shapes.Shape{ .box = try shapes.Box.init(alloc, 100, 100) },
-        @floatFromInt(graphics.width() / 2),
-        @floatFromInt(graphics.height() / 2),
-        0.0,
+    const joint = Constraint.initJoint(
+        &world.bodies.items[0],
+        &world.bodies.items[1],
+        &world.bodies.items[0].position,
     );
-    bigBox.rotation = 0.3;
-    bigBox.setTexture(try graphics.Texture.load("assets/crate.png"));
-    try world.addBody(alloc, bigBox);
+    try world.addConstraint(alloc, joint);
 
     return .{
         .alloc = alloc,

@@ -57,8 +57,8 @@ pub const Contact = struct {
 
         // Apply the total impulse
         const J = Jn.add(&Jt);
-        self.a.applyImpulseAngular(&J, &ra);
-        self.b.applyImpulseAngular(&J.negate(), &rb);
+        self.a.applyImpulseAngularAtPoint(&J, &ra);
+        self.b.applyImpulseAngularAtPoint(&J.negate(), &rb);
     }
 };
 

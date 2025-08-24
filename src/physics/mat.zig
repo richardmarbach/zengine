@@ -33,6 +33,16 @@ pub fn MatMxN(comptime Scalar: type, M: comptime_int, N: comptime_int) type {
             return .{ .v = v };
         }
 
+        pub inline fn col(m: *const Matrix, c: usize) ColVec {
+            var v: [M]Scalar = undefined;
+            inline for (0..N) |r| {
+                inline for (0..M) |i| {
+                    v[i] = m.v[r].v[c];
+                }
+            }
+            return .{ .v = v };
+        }
+
         pub inline fn zero() Matrix {
             var v: [rows]RowVec = undefined;
             inline for (0..rows) |r| {
@@ -57,20 +67,36 @@ pub fn MatMxN(comptime Scalar: type, M: comptime_int, N: comptime_int) type {
             return .{ .v = vs };
         }
 
+        pub inline fn addScalar(m: *const Matrix, s: Scalar) Matrix {
+            var result: Matrix = undefined;
+            inline for (0..Matrix.rows) |r| {
+                result.v[r] = m.v[r].addScalar(s);
+            }
+            return result;
+        }
+
+        pub inline fn mulScalar(m: *const Matrix, s: Scalar) Matrix {
+            var result: Matrix = undefined;
+            inline for (0..Matrix.rows) |r| {
+                result.v[r] = m.v[r].mulScalar(s);
+            }
+            return result;
+        }
+
         pub inline fn mul(a: *const Matrix, b: *const Matrix) Matrix {
             @setEvalBranchQuota(10000);
             var result: Matrix = undefined;
             inline for (0..Matrix.rows) |r| {
-                inline for (0..Matrix.cols) |col| {
+                inline for (0..Matrix.cols) |c| {
                     var sum: RowVec.T = 0.0;
                     inline for (0..RowVec.n) |i| {
                         // Note: we directly access rows/columns below as it is much faster **in
                         // debug builds**, instead of using these helpers:
                         //
                         // sum += a.row(r).mul(&b.col(col)).v[i];
-                        sum += a.v[i].v[r] * b.v[col].v[i];
+                        sum += a.v[i].v[r] * b.v[c].v[i];
                     }
-                    result.v[col].v[r] = sum;
+                    result.v[c].v[r] = sum;
                 }
             }
             return result;
@@ -81,7 +107,7 @@ pub fn MatMxN(comptime Scalar: type, M: comptime_int, N: comptime_int) type {
             break :t MatMxN(Matrix.T, Matrix.rows, MatrixB.cols);
         } {
             const MatrixB = @typeInfo(@TypeOf(b)).pointer.child;
-            std.debug.assert(MatrixB.cols == Matrix.rows);
+            std.debug.assert(Matrix.cols == MatrixB.rows);
             const Result = MatMxN(Matrix.T, Matrix.rows, MatrixB.cols);
 
             @setEvalBranchQuota(10000);
@@ -92,21 +118,34 @@ pub fn MatMxN(comptime Scalar: type, M: comptime_int, N: comptime_int) type {
                     inline for (0..RowVec.n) |i| {
                         sum += a.v[r].v[i] * b.v[i].v[c];
                     }
-                    result.v[c].v[r] = sum;
+                    result.v[r].v[c] = sum;
                 }
             }
 
             return result;
         }
 
-        pub inline fn mulVec(matrix: *const Matrix, vector: *const ColVec) ColVec {
+        pub inline fn mulVec(matrix: *const Matrix, vector: *const RowVec) ColVec {
             var result = [_]ColVec.T{0} ** ColVec.n;
             inline for (0..Matrix.rows) |r| {
-                inline for (0..ColVec.n) |i| {
-                    result[i] += matrix.v[r].v[i] * vector.v[r];
+                inline for (0..Matrix.cols) |c| {
+                    result[r] += matrix.v[r].v[c] * vector.v[c];
                 }
             }
             return ColVec{ .v = result };
+        }
+
+        pub fn solveGaussSeidel(lhs: *const Matrix, rhs: *const RowVec) RowVec {
+            var result: RowVec = RowVec.zero();
+            for (0..Matrix.rows) |_| {
+                for (0..Matrix.rows) |i| {
+                    if (std.math.approxEqAbs(Scalar, lhs.v[i].v[i], 0.0, std.math.floatEps(Scalar))) {
+                        continue;
+                    }
+                    result.v[i] = (rhs.v[i] / lhs.v[i].v[i]) - (lhs.row(i).dot(&result) / lhs.v[i].v[i]);
+                }
+            }
+            return result;
         }
 
         pub inline fn eqlApprox(a: *const Matrix, b: *const Matrix, tolerance: ColVec.T) bool {

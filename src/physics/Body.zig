@@ -64,7 +64,13 @@ pub inline fn applyImpulse(self: *Self, J: *const Vec2) void {
     self.velocity = self.velocity.add(&J.mulScalar(self.invMass));
 }
 
-pub inline fn applyImpulseAngular(self: *Self, J: *const Vec2, r: *const Vec2) void {
+pub inline fn applyImpulseAngular(self: *Self, j: f32) void {
+    if (self.isStatic()) return;
+
+    self.angularVelocity += j * self.invI;
+}
+
+pub inline fn applyImpulseAngularAtPoint(self: *Self, J: *const Vec2, r: *const Vec2) void {
     if (self.isStatic()) return;
 
     self.velocity = self.velocity.add(&J.mulScalar(self.invMass));
@@ -79,31 +85,26 @@ pub inline fn addForce(self: *Self, force: *const Vec2) void {
     self.sumForces = self.sumForces.add(force);
 }
 
-pub fn update(self: *Self, dt: f32) void {
-    self.integrate(dt);
-    self.integrateAngular(dt);
-    self.shape.updateVertices(&self.position, self.rotation);
-}
-
-pub fn integrate(self: *Self, dt: f32) void {
+pub fn integrateForces(self: *Self, dt: f32) void {
     if (self.isStatic()) return;
 
     self.acceleration = self.sumForces.mulScalar(self.invMass);
-
     self.velocity = self.velocity.add(&self.acceleration.mulScalar(dt));
-    self.position = self.position.add(&self.velocity.mulScalar(dt));
-
-    self.clearForces();
-}
-
-pub fn integrateAngular(self: *Self, dt: f32) void {
-    if (self.isStatic()) return;
 
     self.angularAcceleration = self.sumTorque * self.invI;
     self.angularVelocity += self.angularAcceleration * dt;
-    self.rotation += self.angularVelocity * dt;
 
+    self.clearForces();
     self.clearTorque();
+}
+
+pub fn integrateVelocities(self: *Self, dt: f32) void {
+    if (self.isStatic()) return;
+
+    self.rotation += self.angularVelocity * dt;
+    self.position = self.position.add(&self.velocity.mulScalar(dt));
+
+    self.shape.updateVertices(&self.position, self.rotation);
 }
 
 pub inline fn clearForces(self: *Self) void {
@@ -112,4 +113,12 @@ pub inline fn clearForces(self: *Self) void {
 
 pub inline fn clearTorque(self: *Self) void {
     self.sumTorque = 0;
+}
+
+pub inline fn toLocalSpace(self: *const Self, point: *const Vec2) Vec2 {
+    return point.sub(&self.position).rotate(-self.rotation);
+}
+
+pub inline fn toWorldSpace(self: *const Self, point: *const Vec2) Vec2 {
+    return point.rotate(self.rotation).add(&self.position);
 }
