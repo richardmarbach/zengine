@@ -15,6 +15,7 @@ bPoint: Vec2, // Anchor in B's local space
 
 lambda: f32 = 0.0,
 jacobian: J = J.zero(),
+bias: f32 = 0.0,
 
 constraint: union(enum) {
     joint: struct {
@@ -58,10 +59,26 @@ pub fn velocities(self: *const Self) J.RowVec {
     );
 }
 
-pub fn preSolve(self: *Self) void {
+pub fn preSolve(self: *Self, deltaTime: f32) void {
     switch (self.constraint) {
         .joint => |*joint| {
-            const j = self.jointJacobian();
+            const pa = self.a.toWorldSpace(&self.aPoint);
+            const pb = self.b.toWorldSpace(&self.bPoint);
+
+            const ra = pa.sub(&self.a.position);
+            const rb = pb.sub(&self.b.position);
+
+            const j1 = pa.sub(&pb).mulScalar(2);
+            const j2 = pb.sub(&pa).mulScalar(2);
+
+            const j = J.init(.{.{
+                j1.x(),
+                j1.y(),
+                ra.cross(&pa.sub(&pb)) * 2,
+                j2.x(),
+                j2.y(),
+                rb.cross(&pb.sub(&pa)) * 2,
+            }});
             const jt = j.transpose();
             const iM = self.invM();
 
@@ -75,6 +92,13 @@ pub fn preSolve(self: *Self) void {
             self.a.applyImpulseAngular(impulses.v[2]);
             self.b.applyImpulse(&Vec2.init(impulses.v[3], impulses.v[4]));
             self.b.applyImpulseAngular(impulses.v[5]);
+
+            // Baumgarte stabilization
+            const beta = 0.1;
+            // Positional error
+            var C = pb.sub(&pa).dot(&pb.sub(&pa));
+            C = std.math.clamp(C, 0, @max(0, C - beta));
+            self.bias = (beta / deltaTime) * C;
         },
     }
 }
@@ -88,7 +112,7 @@ pub fn solve(self: *Self) void {
         .joint => |joint| {
             const j = self.jacobian;
 
-            const rhs = j.mulVec(&v).mulScalar(-1);
+            const rhs = j.mulVec(&v).mulScalar(-1).subScalar(self.bias);
             const lambda = joint.K.solveGaussSeidel(&rhs);
             std.debug.assert(@TypeOf(lambda).n == 1);
 
@@ -101,24 +125,4 @@ pub fn solve(self: *Self) void {
             self.b.applyImpulseAngular(impulses.v[5]);
         },
     }
-}
-
-fn jointJacobian(self: *const Self) J {
-    const pa = self.a.toWorldSpace(&self.aPoint);
-    const pb = self.b.toWorldSpace(&self.bPoint);
-
-    const ra = pa.sub(&self.a.position);
-    const rb = pb.sub(&self.b.position);
-
-    const j1 = pa.sub(&pb).mulScalar(2);
-    const j2 = pb.sub(&pa).mulScalar(2);
-
-    return J.init(.{.{
-        j1.x(),
-        j1.y(),
-        ra.cross(&pa.sub(&pb)) * 2,
-        j2.x(),
-        j2.y(),
-        rb.cross(&pb.sub(&pa)) * 2,
-    }});
 }

@@ -69,7 +69,7 @@ pub fn update(self: *World, deltaTime: f32) void {
     }
 
     for (self.constraints.items) |*constraint| {
-        constraint.preSolve();
+        constraint.preSolve(deltaTime);
     }
 
     for (0..5) |_| {
