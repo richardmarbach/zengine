@@ -67,28 +67,27 @@ pub fn init(alloc: std.mem.Allocator) !Self {
     // bigBox.setTexture(try graphics.Texture.load("assets/crate.png"));
     // try world.addBody(alloc, bigBox);
 
-    const a = Body.init(
-        shapes.Shape{ .circle = .{ .radius = 30 } },
-        @floatFromInt(graphics.width() / 2),
-        @floatFromInt(graphics.height() / 2),
-        0,
-    );
-    try world.addBody(alloc, a);
+    const NUM_BOXES = 8;
+    for (0..NUM_BOXES) |i| {
+        const mass: f32 = if (i == 0) 0.0 else 1.0;
+        var body = Body.init(
+            shapes.Shape{ .box = try shapes.Box.init(alloc, 30, 30) },
+            @as(f32, @floatFromInt(graphics.width())) / 2 - (40 * @as(f32, @floatFromInt(i))),
+            100,
+            mass,
+        );
+        body.setTexture(try graphics.Texture.load("assets/crate.png"));
+        try world.addBody(alloc, body);
+    }
 
-    const b = Body.init(
-        shapes.Shape{ .circle = .{ .radius = 20 } },
-        a.position.x() - 100,
-        a.position.y(),
-        1,
-    );
-    try world.addBody(alloc, b);
-
-    const joint = Constraint.initJoint(
-        &world.bodies.items[0],
-        &world.bodies.items[1],
-        &world.bodies.items[0].position,
-    );
-    try world.addConstraint(alloc, joint);
+    for (0..NUM_BOXES - 1) |i| {
+        const joint = Constraint.initJoint(
+            &world.bodies.items[i],
+            &world.bodies.items[i + 1],
+            &world.bodies.items[i].position,
+        );
+        try world.addConstraint(alloc, joint);
+    }
 
     return .{
         .alloc = alloc,

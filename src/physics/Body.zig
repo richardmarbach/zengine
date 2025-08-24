@@ -28,7 +28,7 @@ texture: ?graphics.Texture = null,
 pub fn init(shape: Shape, x: f32, y: f32, mass: f32) Self {
     const I = shape.momentOfInertia() * mass;
 
-    return .{
+    var body: Self = .{
         .position = Vec2.init(x, y),
         .velocity = Vec2.init(0, 0),
         .acceleration = Vec2.init(0, 0),
@@ -41,6 +41,8 @@ pub fn init(shape: Shape, x: f32, y: f32, mass: f32) Self {
         .invI = if (I == 0) 0 else 1 / I,
         .restitution = 0,
     };
+    body.shape.updateVertices(&body.position, body.rotation);
+    return body;
 }
 
 pub fn deinit(self: *Self, alloc: std.mem.Allocator) void {

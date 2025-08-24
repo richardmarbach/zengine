@@ -67,9 +67,17 @@ pub fn update(self: *World, deltaTime: f32) void {
 
         body.integrateForces(deltaTime);
     }
+
     for (self.constraints.items) |*constraint| {
-        constraint.solve();
+        constraint.preSolve();
     }
+
+    for (0..5) |_| {
+        for (self.constraints.items) |*constraint| {
+            constraint.solve();
+        }
+    }
+
     for (self.bodies.items) |*body| {
         body.integrateVelocities(deltaTime);
     }

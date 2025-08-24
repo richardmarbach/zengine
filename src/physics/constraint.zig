@@ -4,6 +4,7 @@ const Vec2 = @import("vec.zig").Vec2(f32);
 const std = @import("std");
 
 const J = mat.MatMxN(f32, 1, 6);
+const M1x1 = mat.MatMxN(f32, 1, 1);
 const M6x6 = mat.MatMxN(f32, 6, 6);
 
 a: *Body,
@@ -12,8 +13,13 @@ b: *Body,
 aPoint: Vec2, // Anchor in A's local space
 bPoint: Vec2, // Anchor in B's local space
 
+lambda: f32 = 0.0,
+jacobian: J = J.zero(),
+
 constraint: union(enum) {
-    joint: struct {},
+    joint: struct {
+        K: M1x1 = M1x1.zero(),
+    },
 },
 
 const Self = @This();
@@ -24,7 +30,7 @@ pub fn initJoint(a: *Body, b: *Body, anchor: *const Vec2) Self {
         .b = b,
         .aPoint = a.toLocalSpace(anchor),
         .bPoint = b.toLocalSpace(anchor),
-        .constraint = .joint,
+        .constraint = .{ .joint = .{} },
     };
 }
 
@@ -52,20 +58,41 @@ pub fn velocities(self: *const Self) J.RowVec {
     );
 }
 
+pub fn preSolve(self: *Self) void {
+    switch (self.constraint) {
+        .joint => |*joint| {
+            const j = self.jointJacobian();
+            const jt = j.transpose();
+            const iM = self.invM();
+
+            self.jacobian = j;
+            joint.K = j.mulM(&iM).mulM(&jt);
+
+            // Warm start
+            const impulses = j.mulScalar(self.lambda).row(0);
+
+            self.a.applyImpulse(&Vec2.init(impulses.v[0], impulses.v[1]));
+            self.a.applyImpulseAngular(impulses.v[2]);
+            self.b.applyImpulse(&Vec2.init(impulses.v[3], impulses.v[4]));
+            self.b.applyImpulseAngular(impulses.v[5]);
+        },
+    }
+}
+
+pub fn postSolve(_: *Self) void {}
+
 pub fn solve(self: *Self) void {
-    const iM = self.invM();
     const v = self.velocities();
 
     switch (self.constraint) {
-        .joint => {
-            const j = self.jointJacobian();
-            const jt = j.transpose();
+        .joint => |joint| {
+            const j = self.jacobian;
 
-            const lhs = j.mulM(&iM).mulM(&jt);
             const rhs = j.mulVec(&v).mulScalar(-1);
-            const lambda = lhs.solveGaussSeidel(&rhs);
-
+            const lambda = joint.K.solveGaussSeidel(&rhs);
             std.debug.assert(@TypeOf(lambda).n == 1);
+
+            self.lambda += lambda.v[0];
             const impulses = j.mulScalar(lambda.v[0]).row(0);
 
             self.a.applyImpulse(&Vec2.init(impulses.v[0], impulses.v[1]));
