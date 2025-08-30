@@ -52,7 +52,7 @@ pub fn addConstraint(self: *World, alloc: std.mem.Allocator, constraint: Constra
     try self.constraints.append(alloc, constraint);
 }
 
-pub fn update(self: *World, deltaTime: f32) void {
+pub fn update(self: *World, alloc: std.mem.Allocator, deltaTime: f32) !void {
     for (self.bodies.items) |*body| {
         const weight = Forces.weight(body, self.gravity * physicsConstants.PIXELS_PER_METER);
         body.addForce(&weight);
@@ -68,6 +68,32 @@ pub fn update(self: *World, deltaTime: f32) void {
         body.integrateForces(deltaTime);
     }
 
+    var penetrationConstraints = std.ArrayList(Constraint){};
+    defer penetrationConstraints.deinit(alloc);
+
+    // Resolve collisions
+    for (self.bodies.items, 0..) |*a, i| {
+        for (self.bodies.items[i + 1 ..]) |*b| {
+            var contact: collisions.Contact = undefined;
+            if (collisions.isColliding(a, b, &contact)) {
+                try penetrationConstraints.append(
+                    alloc,
+                    Constraint.initPenetration(
+                        contact.a,
+                        contact.b,
+                        &contact.start,
+                        &contact.end,
+                        &contact.normal,
+                    ),
+                );
+            }
+        }
+    }
+
+    for (penetrationConstraints.items) |*constraint| {
+        constraint.preSolve(deltaTime);
+    }
+
     for (self.constraints.items) |*constraint| {
         constraint.preSolve(deltaTime);
     }
@@ -76,22 +102,13 @@ pub fn update(self: *World, deltaTime: f32) void {
         for (self.constraints.items) |*constraint| {
             constraint.solve();
         }
+
+        for (penetrationConstraints.items) |*constraint| {
+            constraint.solve();
+        }
     }
 
     for (self.bodies.items) |*body| {
         body.integrateVelocities(deltaTime);
-    }
-
-    self.checkCollisions();
-}
-
-pub fn checkCollisions(self: *World) void {
-    for (self.bodies.items, 0..) |*a, i| {
-        for (self.bodies.items[i + 1 ..]) |*b| {
-            var contact: collisions.Contact = undefined;
-            if (collisions.isColliding(a, b, &contact)) {
-                contact.resolveCollision();
-            }
-        }
     }
 }

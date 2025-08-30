@@ -30,32 +30,32 @@ pub fn init(alloc: std.mem.Allocator) !Self {
 
     var world = World.init(9.8);
 
-    // var floor = Body.init(
-    //     shapes.Shape{ .box = try shapes.Box.init(alloc, graphics.width() - 20, 10) },
-    //     @floatFromInt(graphics.width() / 2),
-    //     @floatFromInt(graphics.height() - 10),
-    //     0.0,
-    // );
-    // floor.restitution = 0.5;
-    // try world.addBody(alloc, floor);
-    //
-    // var leftWall = Body.init(
-    //     shapes.Shape{ .box = try shapes.Box.init(alloc, 10, graphics.height() - 30) },
-    //     5,
-    //     @floatFromInt(graphics.height() / 2),
-    //     0.0,
-    // );
-    // leftWall.restitution = 0.5;
-    // try world.addBody(alloc, leftWall);
-    //
-    // var rightWall = Body.init(
-    //     shapes.Shape{ .box = try shapes.Box.init(alloc, 10, graphics.height() - 30) },
-    //     @floatFromInt(graphics.width() - 5),
-    //     @floatFromInt(graphics.height() / 2),
-    //     0.0,
-    // );
-    // rightWall.restitution = 0.5;
-    // try world.addBody(alloc, rightWall);
+    var floor = Body.init(
+        shapes.Shape{ .box = try shapes.Box.init(alloc, graphics.width() - 20, 10) },
+        @floatFromInt(graphics.width() / 2),
+        @floatFromInt(graphics.height() - 10),
+        0.0,
+    );
+    floor.restitution = 0.7;
+    try world.addBody(alloc, floor);
+
+    var leftWall = Body.init(
+        shapes.Shape{ .box = try shapes.Box.init(alloc, 10, graphics.height() - 30) },
+        5,
+        @floatFromInt(graphics.height() / 2),
+        0.0,
+    );
+    leftWall.restitution = 0.2;
+    try world.addBody(alloc, leftWall);
+
+    var rightWall = Body.init(
+        shapes.Shape{ .box = try shapes.Box.init(alloc, 10, graphics.height() - 30) },
+        @floatFromInt(graphics.width() - 5),
+        @floatFromInt(graphics.height() / 2),
+        0.0,
+    );
+    rightWall.restitution = 0.2;
+    try world.addBody(alloc, rightWall);
 
     // var bigBox = Body.init(
     //     shapes.Shape{ .box = try shapes.Box.init(alloc, 100, 100) },
@@ -67,27 +67,15 @@ pub fn init(alloc: std.mem.Allocator) !Self {
     // bigBox.setTexture(try graphics.Texture.load("assets/crate.png"));
     // try world.addBody(alloc, bigBox);
 
-    const NUM_BOXES = 8;
-    for (0..NUM_BOXES) |i| {
-        const mass: f32 = if (i == 0) 0.0 else 1.0;
-        var body = Body.init(
-            shapes.Shape{ .box = try shapes.Box.init(alloc, 30, 30) },
-            @as(f32, @floatFromInt(graphics.width())) / 2 - (40 * @as(f32, @floatFromInt(i))),
-            100,
-            mass,
-        );
-        body.setTexture(try graphics.Texture.load("assets/crate.png"));
-        try world.addBody(alloc, body);
-    }
-
-    for (0..NUM_BOXES - 1) |i| {
-        const joint = Constraint.initJoint(
-            &world.bodies.items[i],
-            &world.bodies.items[i + 1],
-            &world.bodies.items[i].position,
-        );
-        try world.addConstraint(alloc, joint);
-    }
+    var bigBall = Body.init(
+        shapes.Shape{ .circle = shapes.Circle{ .radius = 64 } },
+        @floatFromInt(graphics.width() / 2),
+        @floatFromInt(graphics.height() / 2),
+        0.0,
+    );
+    bigBall.rotation = 0.3;
+    bigBall.setTexture(try graphics.Texture.load("assets/bowlingball.png"));
+    try world.addBody(alloc, bigBall);
 
     return .{
         .alloc = alloc,
@@ -165,7 +153,9 @@ pub fn update(self: *Self) void {
     };
 
     self.timePreviousFrame = c.SDL_GetTicks();
-    self.world.update(deltaTime);
+    self.world.update(self.alloc, deltaTime) catch {
+        std.debug.print("World update error\n", .{});
+    };
 }
 
 pub fn render(self: *const Self) void {

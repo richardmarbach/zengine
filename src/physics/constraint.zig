@@ -21,9 +21,27 @@ constraint: union(enum) {
     joint: struct {
         K: M1x1 = M1x1.zero(),
     },
+    penetration: struct {
+        normal: Vec2,
+        K: M1x1 = M1x1.zero(),
+    },
 },
 
 const Self = @This();
+
+pub fn initPenetration(a: *Body, b: *Body, collisionA: *const Vec2, collisionB: *const Vec2, normal: *const Vec2) Self {
+    return .{
+        .a = a,
+        .b = b,
+        .aPoint = a.toLocalSpace(collisionA),
+        .bPoint = b.toLocalSpace(collisionB),
+        .constraint = .{
+            .penetration = .{
+                .normal = a.toLocalSpace(normal),
+            },
+        },
+    };
+}
 
 pub fn initJoint(a: *Body, b: *Body, anchor: *const Vec2) Self {
     return .{
@@ -31,7 +49,9 @@ pub fn initJoint(a: *Body, b: *Body, anchor: *const Vec2) Self {
         .b = b,
         .aPoint = a.toLocalSpace(anchor),
         .bPoint = b.toLocalSpace(anchor),
-        .constraint = .{ .joint = .{} },
+        .constraint = .{
+            .joint = .{},
+        },
     };
 }
 
@@ -60,14 +80,14 @@ pub fn velocities(self: *const Self) J.RowVec {
 }
 
 pub fn preSolve(self: *Self, deltaTime: f32) void {
+    const pa = self.a.toWorldSpace(&self.aPoint);
+    const pb = self.b.toWorldSpace(&self.bPoint);
+
+    const ra = pa.sub(&self.a.position);
+    const rb = pb.sub(&self.b.position);
+
     switch (self.constraint) {
         .joint => |*joint| {
-            const pa = self.a.toWorldSpace(&self.aPoint);
-            const pb = self.b.toWorldSpace(&self.bPoint);
-
-            const ra = pa.sub(&self.a.position);
-            const rb = pb.sub(&self.b.position);
-
             const j1 = pa.sub(&pb).mulScalar(2);
             const j2 = pb.sub(&pa).mulScalar(2);
 
@@ -97,7 +117,38 @@ pub fn preSolve(self: *Self, deltaTime: f32) void {
             const beta = 0.1;
             // Positional error
             var C = pb.sub(&pa).dot(&pb.sub(&pa));
-            C = std.math.clamp(C, 0, @max(0, C - beta));
+            C = @max(0, C - beta);
+            self.bias = (beta / deltaTime) * C;
+        },
+        .penetration => |*penetration| {
+            const n = self.a.toWorldSpace(&penetration.normal);
+            const j = J.init(.{.{
+                -n.x(),
+                -n.y(),
+                ra.negate().cross(&n),
+                n.x(),
+                n.y(),
+                rb.cross(&n),
+            }});
+            const jt = j.transpose();
+            const iM = self.invM();
+
+            self.jacobian = j;
+            penetration.K = j.mulM(&iM).mulM(&jt);
+
+            // Warm start
+            const impulses = j.mulScalar(self.lambda).row(0);
+
+            self.a.applyImpulse(&Vec2.init(impulses.v[0], impulses.v[1]));
+            self.a.applyImpulseAngular(impulses.v[2]);
+            self.b.applyImpulse(&Vec2.init(impulses.v[3], impulses.v[4]));
+            self.b.applyImpulseAngular(impulses.v[5]);
+
+            // Baumgarte stabilization
+            const beta = 0.1;
+            // Positional error
+            var C = pb.sub(&pa).dot(&n.negate());
+            C = @min(0, C + beta);
             self.bias = (beta / deltaTime) * C;
         },
     }
@@ -117,6 +168,25 @@ pub fn solve(self: *Self) void {
             std.debug.assert(@TypeOf(lambda).n == 1);
 
             self.lambda += lambda.v[0];
+            const impulses = j.mulScalar(lambda.v[0]).row(0);
+
+            self.a.applyImpulse(&Vec2.init(impulses.v[0], impulses.v[1]));
+            self.a.applyImpulseAngular(impulses.v[2]);
+            self.b.applyImpulse(&Vec2.init(impulses.v[3], impulses.v[4]));
+            self.b.applyImpulseAngular(impulses.v[5]);
+        },
+        .penetration => |penetration| {
+            const j = self.jacobian;
+
+            const rhs = j.mulVec(&v).mulScalar(-1).subScalar(self.bias);
+            const lambda = penetration.K.solveGaussSeidel(&rhs);
+            std.debug.assert(@TypeOf(lambda).n == 1);
+
+            const oldLambda = self.lambda;
+            self.lambda += lambda.v[0];
+            self.lambda = @max(0, self.lambda);
+            self.lambda -= oldLambda;
+
             const impulses = j.mulScalar(lambda.v[0]).row(0);
 
             self.a.applyImpulse(&Vec2.init(impulses.v[0], impulses.v[1]));
