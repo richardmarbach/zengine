@@ -56,6 +56,7 @@ pub fn Vec2(comptime Scalar: type) type {
             return a.x() * b.y() - a.y() * b.x();
         }
 
+        pub const zero = Shared.zero;
         pub const add = Shared.add;
         pub const sub = Shared.sub;
         pub const mul = Shared.mul;
@@ -139,6 +140,7 @@ pub fn Vec3(comptime Scalar: type) type {
             return s1.sub(&s2);
         }
 
+        pub const zero = Shared.zero;
         pub const add = Shared.add;
         pub const sub = Shared.sub;
         pub const mul = Shared.mul;
@@ -189,14 +191,11 @@ pub fn Vec(comptime Scalar: type, comptime N: comptime_int) type {
             return .{ .v = v };
         }
 
-        pub inline fn zero() VecN {
-            return .{ .v = .{0} };
-        }
-
         pub inline fn get(v: *const VecN, i: usize) Scalar {
             return v.v[i];
         }
 
+        pub const zero = Shared.zero;
         pub const add = Shared.add;
         pub const sub = Shared.sub;
         pub const mul = Shared.mul;
@@ -227,6 +226,10 @@ pub fn Vec(comptime Scalar: type, comptime N: comptime_int) type {
 
 pub fn VecShared(comptime Scalar: type, comptime VecN: type) type {
     return struct {
+        pub inline fn zero() VecN {
+            return .{ .v = @splat(0) };
+        }
+
         pub inline fn add(a: *const VecN, b: *const VecN) VecN {
             return .{ .v = a.v + b.v };
         }

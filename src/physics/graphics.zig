@@ -10,7 +10,7 @@ const c = @cImport({
     @cInclude("SDL3_gfxPrimitives.h");
 });
 
-const Vec2 = @import("physics/vec.zig").Vec2(f32);
+const Vec2 = @import("vec.zig").Vec2(f32);
 
 const native_endian = builtin.cpu.arch.endian();
 

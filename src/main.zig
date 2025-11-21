@@ -17,3 +17,7 @@ pub fn main() !void {
         app.render();
     }
 }
+
+test {
+    std.testing.refAllDecls(@This());
+}

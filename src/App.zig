@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const graphics = @import("graphics.zig");
+const graphics = @import("physics/graphics.zig");
 const Body = @import("physics/Body.zig");
 const physicsConstants = @import("physics/constants.zig");
 const shapes = @import("physics/shapes.zig");
@@ -31,27 +31,27 @@ pub fn init(alloc: std.mem.Allocator) !Self {
     var world = World.init(9.8);
 
     var floor = Body.init(
-        shapes.Shape{ .box = try shapes.Box.init(alloc, graphics.width() - 20, 10) },
-        @floatFromInt(graphics.width() / 2),
-        @floatFromInt(graphics.height() - 10),
+        shapes.Shape{ .box = try shapes.Box.init(alloc, graphics.width() - 58, 20) },
+        @as(f32, @floatFromInt(graphics.width() / 2)) - 5,
+        @as(f32, @floatFromInt(graphics.height())) - 20,
         0.0,
     );
     floor.restitution = 0.7;
     try world.addBody(alloc, floor);
 
     var leftWall = Body.init(
-        shapes.Shape{ .box = try shapes.Box.init(alloc, 10, graphics.height() - 30) },
-        5,
-        @floatFromInt(graphics.height() / 2),
+        shapes.Shape{ .box = try shapes.Box.init(alloc, 20, graphics.height() - 40) },
+        10,
+        @as(f32, @floatFromInt(graphics.height() / 2)) + 10,
         0.0,
     );
     leftWall.restitution = 0.2;
     try world.addBody(alloc, leftWall);
 
     var rightWall = Body.init(
-        shapes.Shape{ .box = try shapes.Box.init(alloc, 10, graphics.height() - 30) },
-        @floatFromInt(graphics.width() - 5),
-        @floatFromInt(graphics.height() / 2),
+        shapes.Shape{ .box = try shapes.Box.init(alloc, 20, graphics.height() - 40) },
+        @floatFromInt(graphics.width() - 20),
+        @as(f32, @floatFromInt(graphics.height() / 2)) + 10,
         0.0,
     );
     rightWall.restitution = 0.2;

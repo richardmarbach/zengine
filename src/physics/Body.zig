@@ -2,7 +2,7 @@ const vec = @import("vec.zig");
 const Vec2 = vec.Vec2(f32);
 const Shape = @import("shapes.zig").Shape;
 const std = @import("std");
-const graphics = @import("../graphics.zig");
+const graphics = @import("graphics.zig");
 
 const Self = @This();
 
@@ -22,6 +22,7 @@ invI: f32,
 sumTorque: f32 = 0,
 
 restitution: f32 = 0.0,
+friction: f32 = 0.3,
 shape: Shape,
 texture: ?graphics.Texture = null,
 
